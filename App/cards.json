@@ -1,0 +1,17 @@
+[
+  {
+    "id": "mae",
+    "name": "前",
+    "texture": "ExampleCard.png"
+  },
+  {
+    "id": "ushiro",
+    "name": "後ろ",
+    "texture": "ExampleCard.png"
+  },
+  {
+    "id": "kougeki",
+    "name": "攻撃",
+    "texture": "ExampleCard.png"
+  }
+]
