@@ -116,6 +116,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="card.cpp" />
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -172,6 +173,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
+    <None Include="App\cards.json" />
     <None Include="App\dll\soundtouch\SoundTouch_x64.dll" />
     <None Include="App\engine\font\fontawesome\fontawesome-brands.otf.zstdcmp" />
     <None Include="App\engine\font\fontawesome\fontawesome-solid.otf.zstdcmp" />
@@ -328,6 +330,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Object.h" />
+    <ClInclude Include="card.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
