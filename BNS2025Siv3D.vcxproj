@@ -157,6 +157,7 @@
     <Image Include="App\example\texture\wood.jpg" />
     <Image Include="App\example\windmill.png" />
     <Image Include="App\icon.ico" />
+    <Image Include="App\resources\texture\serif-window.png" />
     <Image Include="App\resources\texture\tile1.png" />
   </ItemGroup>
   <ItemGroup>
@@ -440,5 +441,3 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
-
-
