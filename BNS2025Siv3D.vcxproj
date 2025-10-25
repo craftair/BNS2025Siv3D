@@ -157,7 +157,7 @@
     <Image Include="App\example\texture\wood.jpg" />
     <Image Include="App\example\windmill.png" />
     <Image Include="App\icon.ico" />
-    <Image Include="App\resources\texture\serif-window.png" />
+    <Image Include="App\resources\texture\message-box.png" />
     <Image Include="App\resources\texture\tile1.png" />
   </ItemGroup>
   <ItemGroup>
@@ -319,6 +319,7 @@
     <None Include="App\example\toml\config.toml" />
     <None Include="App\example\toml\test.toml" />
     <None Include="App\example\zip\zip_test.zip" />
+    <None Include="App\resources\txt\jp.json" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="App\example\shot.mp3" />
@@ -328,6 +329,7 @@
   <ItemGroup>
     <Font Include="App\example\font\DotGothic16\DotGothic16-Regular.ttf" />
     <Font Include="App\example\font\RocknRoll\RocknRollOne-Regular.ttf" />
+    <Font Include="App\resources\font\misaki\misaki_gothic.ttf" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="App\example\objdetect\haarcascade\eye.xml" />

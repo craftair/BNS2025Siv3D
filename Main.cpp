@@ -8,6 +8,8 @@ void Main()
 {
 	Window::Resize(1280, 720);
 
+	FontAsset::Register(U"MisakiFont", FontMethod::MSDF, 16, U"resources/font/misaki/misaki_gothic.ttf");
+
 	App manager;
 	manager.add<Title>(State::Title);
 	manager.add<Monolog>(State::Monolog);
