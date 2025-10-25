@@ -1,0 +1,48 @@
+﻿#pragma once
+#include "CardData.h"
+
+struct CardHandConfig
+{
+	Vec2 virtualSize{ 1280, 720 };
+	double margin = 32.0;
+	double gap = 18.0;
+	size_t columns = 4;
+	double activationOffset = 40.0;
+};
+
+class CardSystem
+{
+public:
+	bool initialize(const FilePathView& libraryPath, const Array<String>& deckIds, const CardHandConfig& config = {});
+	void update();
+	void draw() const;
+	void resetUsage();
+	const Array<String>& playLog() const { return m_playLog; }
+
+private:
+	void loadTextures();
+	void setupInitialLayout();
+	void updateTransform();
+	void updateCards();
+	void updateDragging(const Vec2& cursorVirtual);
+	void drawScene() const;
+	void drawCard(const CardInstance& card) const;
+	void drawUI() const;
+	Vec2 toVirtual(const Vec2& screenPos) const;
+	bool isInsideVirtual(const Vec2& pos) const;
+
+	CardHandConfig m_config;
+
+	Vec2 m_virtualSize{ 1280, 720 };
+	double m_scale = 1.0;
+	Vec2 m_offset{ 0, 0 };
+	double m_activationLine = 260.0;
+	Optional<size_t> m_draggingIndex;
+
+	CardLibrary m_library;
+	CardDeck m_deck;
+	Array<String> m_playLog;
+	HashTable<String, Texture> m_textures;
+	Font m_bodyFont{ 18 };
+};
+
