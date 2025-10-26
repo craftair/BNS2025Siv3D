@@ -44,5 +44,13 @@ private:
 	Array<String> m_playLog;
 	HashTable<String, Texture> m_textures;
 	Font m_bodyFont{ 18 };
-};
 
+	Array<size_t> m_trashOrder;
+	bool m_showTrash = false;
+	bool m_trashJustOpened = false;
+	RectF m_trashButtonScreen{ 0, 0, 0, 0 };
+	Vec2 m_trashModalSize{ 940, 580 };
+	RectF m_trashModalRect{ 0, 0, 0, 0 };
+	RectF m_trashCloseButton{ 0, 0, 0, 0 };
+	double m_trashScroll = 0.0;
+};

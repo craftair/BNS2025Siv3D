@@ -153,6 +153,9 @@
     <ClCompile Include="CardSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MapSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Stage2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -857,6 +860,9 @@
     <ClInclude Include="CardSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MapSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Stage2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -883,3 +889,4 @@
     </ClInclude>
   </ItemGroup>
 </Project>
+
