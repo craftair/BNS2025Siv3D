@@ -8,6 +8,10 @@ Title::Title(const InitData& init)
 
 void Title::update()
 {
+	if (SimpleGUI::Button(U"Monologへ", Vec2{ 240, 40 }, 180))
+	{
+		changeScene(State::Monolog);
+	}
 	if (SimpleGUI::Button(U"Stage1へ", Vec2{ 40, 40 }, 180))
 	{
 		changeScene(State::Stage1);
