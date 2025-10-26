@@ -1,0 +1,68 @@
+﻿{
+    "tile":  {
+                 "size":  [
+                              64,
+                              64
+                          ],
+                 "texture":  "field/mapsquare.png"
+             },
+    "origin":  [
+                   520,
+                   180
+               ],
+    "tiles":  [
+                  [
+                      1,
+                      1,
+                      1,
+                      1,
+                      1,
+                      0,
+                      0
+                  ],
+                  [
+                      1,
+                      1,
+                      0,
+                      0,
+                      1,
+                      1,
+                      1
+                  ],
+                  [
+                      1,
+                      1,
+                      1,
+                      1,
+                      1,
+                      0,
+                      0
+                  ]
+              ],
+    "objectDefinitions":  [
+                              {
+                                  "texture":  "field/hako-only.png",
+                                  "id":  2
+                              },
+                              {
+                                  "texture":  "field/takarabako-only.png",
+                                  "id":  3
+                              }
+                          ],
+    "objectPlacements":  [
+                             {
+                                 "id":  2,
+                                 "position":  [
+                                                  1,
+                                                  0
+                                              ]
+                             },
+                             {
+                                 "id":  3,
+                                 "position":  [
+                                                  4,
+                                                  2
+                                              ]
+                             }
+                         ]
+}

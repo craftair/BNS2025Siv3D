@@ -6,8 +6,6 @@ struct CardDefinition
 	String id;
 	String name;
 	String description;
-	int32 cost = 0;
-	ColorF color = Palette::Lightgray;
 	Vec2 size = Vec2{ 200, 280 };
 	FilePath imagePath;
 };
@@ -21,6 +19,7 @@ struct CardInstance
 	bool isDragging = false;
 	Vec2 dragOffset = Vec2::Zero();
 	bool isUsed = false;
+	bool inTrash = false;
 
 	RectF bounds() const { return rect; }
 };

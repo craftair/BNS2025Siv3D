@@ -11,37 +11,6 @@ namespace
 		return fallback;
 	}
 
-	ColorF parseColor(const JSON& node)
-	{
-		ColorF result = Palette::Lightgray;
-
-		if (not node.isArray())
-		{
-			return result;
-		}
-
-		const size_t count = node.size();
-
-		if (count >= 1)
-		{
-			result.r = readNumber(node[0], result.r);
-		}
-		if (count >= 2)
-		{
-			result.g = readNumber(node[1], result.g);
-		}
-		if (count >= 3)
-		{
-			result.b = readNumber(node[2], result.b);
-		}
-		if (count >= 4)
-		{
-			result.a = readNumber(node[3], result.a);
-		}
-
-		return result;
-	}
-
 	Vec2 parseSize(const JSON& node)
 	{
 		Vec2 size{ 200, 280 };
@@ -100,8 +69,6 @@ bool CardLibrary::loadFromJSON(const FilePathView& path)
 		}
 
 		def.name = cardValue[U"name"].getOr<String>(def.id);
-		def.cost = cardValue[U"cost"].getOr<int32>(0);
-		def.color = parseColor(cardValue[U"color"]);
 		def.size = parseSize(cardValue[U"size"]);
 		def.imagePath = cardValue[U"image"].getOr<String>(U"");
 
@@ -139,6 +106,7 @@ void CardDeck::resetUsage()
 	for (auto& card : m_cards)
 	{
 		card.isUsed = false;
+		card.inTrash = false;
 		card.rect.pos = card.homePosition;
 		card.isDragging = false;
 		card.dragOffset = Vec2::Zero();
