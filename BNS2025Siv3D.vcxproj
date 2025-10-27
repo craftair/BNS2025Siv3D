@@ -159,7 +159,9 @@
     <Image Include="App\example\texture\wood.jpg" />
     <Image Include="App\example\windmill.png" />
     <Image Include="App\icon.ico" />
+    <Image Include="App\resources\texture\close-btn.png" />
     <Image Include="App\resources\texture\message-box.png" />
+    <Image Include="App\resources\texture\settings-box.png" />
     <Image Include="App\resources\texture\tile1.png" />
   </ItemGroup>
   <ItemGroup>
@@ -447,6 +449,3 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
-
-
-
