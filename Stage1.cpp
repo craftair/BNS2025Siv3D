@@ -1,4 +1,4 @@
-#include "Stage1.h"
+﻿#include "Stage1.h"
 #include <utility>
 
 Stage1::Stage1(const InitData& init)
@@ -258,7 +258,7 @@ void Stage1::beginTreasureSelection(const Point& location)
 		cursorX += size.x + spacing;
 	}
 
-	m_cardEffects.clearAllEffects();
+	m_cardEffects.cancelTargeting();
 }
 
 void Stage1::handleTreasureSelectionInput()

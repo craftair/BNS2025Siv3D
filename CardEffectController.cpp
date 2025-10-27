@@ -1,5 +1,6 @@
 #include "CardEffectController.h"
 #include "MapSystem.h"
+#include "MapObjectTypes.h"
 #include "Player.h"
 #include <array>
 
@@ -82,8 +83,17 @@ void CardEffectController::draw() const
 
 void CardEffectController::onCardPlayed(const String& cardId)
 {
-	if ((cardId != U"zen") && (cardId != U"choku"))
+	const bool isMovementEffect = (cardId == U"zen") || (cardId == U"choku");
+	const bool isBoxBreaker = (cardId == U"ka");
+
+	if (not (isMovementEffect || isBoxBreaker))
 	{
+		return;
+	}
+
+	if (isBoxBreaker)
+	{
+		m_canBreakBoxesThisTurn = true;
 		return;
 	}
 
@@ -100,6 +110,12 @@ void CardEffectController::onCardPlayed(const String& cardId)
 void CardEffectController::clearAllEffects()
 {
 	m_pendingCardEffects.clear();
+	m_canBreakBoxesThisTurn = false;
+	clearTargeting(false);
+}
+
+void CardEffectController::cancelTargeting()
+{
 	clearTargeting(false);
 }
 
@@ -131,7 +147,7 @@ void CardEffectController::startZenTargeting()
 	for (const auto& dir : CardinalDirections)
 	{
 		const Point target = origin + dir;
-		if (m_mapSystem->canEnter(target))
+		if (canTraverse(target))
 		{
 			TargetOption option;
 			option.selection = target;
@@ -166,7 +182,7 @@ void CardEffectController::startChokuTargeting()
 		Point current = origin;
 		Point next = current + dir;
 
-		while (m_mapSystem->canEnter(next))
+		while (canTraverse(next))
 		{
 			path << next;
 			current = next;
@@ -303,6 +319,7 @@ void CardEffectController::applyTargetSelection(size_t optionIndex)
 		m_player->setGridPosition(option.destination, *m_mapSystem);
 	}
 
+	destroyBoxesAlong(option.path);
 	revealPath(option.path);
 	m_mapSystem->revealAround(m_player->gridPosition());
 	clearTargeting();
@@ -319,4 +336,46 @@ void CardEffectController::revealPath(const Array<Point>& path) const
 	{
 		m_mapSystem->revealAround(tile);
 	}
+}
+
+bool CardEffectController::canTraverse(const Point& gridPos) const
+{
+	if (not m_mapSystem)
+	{
+		return false;
+	}
+
+	if (m_mapSystem->canEnter(gridPos))
+	{
+		return true;
+	}
+
+	return (m_canBreakBoxesThisTurn && isBox(gridPos));
+}
+
+void CardEffectController::destroyBoxesAlong(const Array<Point>& path)
+{
+	if ((not m_mapSystem) || (not m_canBreakBoxesThisTurn))
+	{
+		return;
+	}
+
+	for (const auto& tile : path)
+	{
+		if (isBox(tile))
+		{
+			m_mapSystem->removeObjectAt(tile);
+			m_mapSystem->revealAround(tile);
+		}
+	}
+}
+
+bool CardEffectController::isBox(const Point& gridPos) const
+{
+	if (not m_mapSystem)
+	{
+		return false;
+	}
+
+	return (ToMapObjectType(m_mapSystem->objectIdAt(gridPos)) == MapObjectType::Box);
 }

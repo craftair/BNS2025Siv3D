@@ -1,43 +1,13 @@
 ﻿{
     "tile":  {
-                 "size":  [
-                              64,
-                              64
-                          ],
+                 "size":  [64,64],
                  "texture":  "field/mapsquare.png"
              },
-    "origin":  [
-                   520,
-                   180
-               ],
+    "origin":  [520,180],
     "tiles":  [
-                  [
-                      1,
-                      1,
-                      1,
-                      1,
-                      1,
-                      0,
-                      0
-                  ],
-                  [
-                      1,
-                      1,
-                      0,
-                      0,
-                      1,
-                      1,
-                      1
-                  ],
-                  [
-                      1,
-                      1,
-                      1,
-                      1,
-                      1,
-                      0,
-                      0
-                  ]
+                  [1,1,1,1,1,0,0],
+                  [1,1,0,0,1,1,1],
+                  [1,1,1,1,1,0,0]
               ],
     "objectDefinitions":  [
                               {
@@ -47,6 +17,10 @@
                               {
                                   "texture":  "field/treasurebox.png",
                                   "id":  2
+                              },
+                              {
+                                  "texture":  "field/pillar.png",
+                                  "id":  7
                               }
                           ],
     "objectPlacements":  [
@@ -63,6 +37,10 @@
                                                   4,
                                                   2
                                               ]
+                             },
+                             {
+                                "id":   7,
+                                "position": [6,1] 
                              }
                          ]
 }
