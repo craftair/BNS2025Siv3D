@@ -16,7 +16,9 @@ enum class State
 
 struct GameData
 {
-
+	bool showSettings = false;
+	double bgmVolume = 1.0;
+	double seVolume = 1.0;
 };
 
 using App = SceneManager<State, GameData>;

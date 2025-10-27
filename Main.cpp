@@ -4,22 +4,71 @@
 #include "Monolog.h"
 #include "Stage1.h"
 
+void Settings(GameData& data, App& manager, Array<Texture> textures)
+{
+	const RectF backgroundRect{ 0, 0, 1280, 720 };
+	backgroundRect.draw(ColorF{ 0.0, 0.5 });
+	const RectF modalRect{ 320, 168, 640, 384 };
+	modalRect(textures[0](0, 0, 640, 384)).draw();
+
+	const RectF closeBtnRect{ modalRect.tr() + Vec2{-72, 24}, 48, 48 };
+	closeBtnRect(textures[1](0, 0, 48, 48)).draw();
+
+	const Vec2 basePos = modalRect.tl();
+
+	SimpleGUI::Slider(U" BGM", data.bgmVolume, 0.0, 1.0, basePos + Vec2{ 48, 96 }, 96, 400);
+	GlobalAudio::SetVolume(data.bgmVolume);
+
+	SimpleGUI::Slider(U" SE", data.seVolume, 0.0, 1.0, basePos + Vec2{ 48, 192 }, 96, 400);
+
+	if (SimpleGUI::Button(U"タイトルに戻る", basePos + Vec2{ 48, 288 }))
+	{
+		data.showSettings = false;
+		manager.changeScene(State::Title);
+	}
+
+	if (backgroundRect.leftClicked() && not modalRect.leftClicked())
+	{
+		data.showSettings = false;
+	}
+	if (closeBtnRect.leftClicked())
+	{
+		data.showSettings = false;
+	}
+}
+
 void Main()
 {
 	Window::Resize(1280, 720);
 
 	FontAsset::Register(U"MisakiFont", FontMethod::MSDF, 16, U"resources/font/misaki/misaki_gothic.ttf");
 
+	Array<Texture> settingsTextures = {
+		Texture{ U"resources/texture/settings-box.png" },
+		Texture{ U"resources/texture/close-btn.png" }
+	};
+
 	App manager;
 	manager.add<Title>(State::Title);
 	manager.add<Monolog>(State::Monolog);
 	manager.add<Stage1>(State::Stage1);
 
+	auto gameData = manager.get();
+
+	GlobalAudio::SetVolume(gameData->bgmVolume);
+
 	while (System::Update())
 	{
-		if (not manager.update())
+		if (not gameData->showSettings)
 		{
-			break;
+			manager.update();
+		}
+
+		manager.drawScene();
+
+		if (gameData->showSettings)
+		{
+			Settings(*gameData, manager, settingsTextures);
 		}
 	}
 }
