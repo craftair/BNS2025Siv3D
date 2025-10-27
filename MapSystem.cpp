@@ -19,8 +19,11 @@ bool MapSystem::loadFromJSON(const FilePathView& path, const Vec2& virtualSize)
 	m_scale = 1.0;
 	m_offset = Vec2{ 0, 0 };
 	m_tiles.clear();
+	m_objectGrid.clear();
+	m_tileVisibility.clear();
 	m_objectTextures.clear();
 	m_objectPlacements.clear();
+	m_fogTexture = Texture{};
 
 	const JSON json = JSON::Load(path);
 	if (not json)
@@ -112,6 +115,25 @@ bool MapSystem::loadFromJSON(const FilePathView& path, const Vec2& virtualSize)
 		m_tiles << row;
 	}
 
+	m_objectGrid.clear();
+	m_objectGrid.reserve(m_tiles.size());
+	for (const auto& row : m_tiles)
+	{
+		m_objectGrid << Array<int32>(row.size(), 0);
+	}
+
+	initializeVisibility(not m_fogOfWarEnabled);
+
+	// Try to load a default fog texture used to cover unrevealed tiles.
+	try
+	{
+		m_fogTexture = Texture{ U"field/Box2.png", TextureDesc::Mipped };
+	}
+	catch (...)
+	{
+		m_fogTexture = Texture{};
+	}
+
 	JSON objectDefsNode;
 	try
 	{
@@ -177,7 +199,16 @@ bool MapSystem::loadFromJSON(const FilePathView& path, const Vec2& virtualSize)
 
 			const int32 x = posNode[0].getOr<int32>(0);
 			const int32 y = posNode[1].getOr<int32>(0);
-			m_objectPlacements << ObjectPlacement{ id, Point{ x, y } };
+			const Point gridPos{ x, y };
+			m_objectPlacements << ObjectPlacement{ id, gridPos };
+			if ((y >= 0) && (y < static_cast<int32>(m_objectGrid.size())))
+			{
+				auto& row = m_objectGrid[y];
+				if ((x >= 0) && (x < static_cast<int32>(row.size())))
+				{
+					row[x] = id;
+				}
+			}
 		}
 	}
 
@@ -198,25 +229,53 @@ void MapSystem::draw() const
 		const auto& row = m_tiles[y];
 		for (size_t x = 0; x < row.size(); ++x)
 		{
-			if (row[x] == 0)
+			const Point gridPos{ static_cast<int32>(x), static_cast<int32>(y) };
+			const bool visible = isTileVisible(gridPos);
+			const int32 tileValue = row[x];
+
+			if (tileValue == 0)
 			{
 				continue;
 			}
 
-			const RectF rect{ gridToWorld(Point{ static_cast<int32>(x), static_cast<int32>(y) }), m_tileSize };
-			if (m_tileTexture)
+			const RectF rect{ gridToWorld(gridPos), m_tileSize };
+			if (visible)
 			{
-				m_tileTexture.resized(rect.size).draw(rect.pos);
+				if (m_tileTexture)
+				{
+					m_tileTexture.resized(rect.size).draw(rect.pos);
+				}
+				else
+				{
+					rect.draw(ColorF{ 0.25, 0.3, 0.38, 0.95 });
+				}
 			}
 			else
 			{
-				rect.draw(ColorF{ 0.25, 0.3, 0.38, 0.95 });
+				if (m_fogTexture)
+				{
+					m_fogTexture.resized(rect.size).draw(rect.pos);
+				}
+				else
+				{
+					rect.draw(ColorF{ 0.05, 0.05, 0.07, 0.95 });
+				}
 			}
 		}
 	}
 
 	for (const auto& placement : m_objectPlacements)
 	{
+		if (objectIdAt(placement.gridPos) != placement.id)
+		{
+			continue;
+		}
+
+		if (not isTileVisible(placement.gridPos))
+		{
+			continue;
+		}
+
 		const RectF rect{ gridToWorld(placement.gridPos), m_tileSize };
 		const Vec2 inset = m_tileSize * 0.18;
 		const RectF objectRect = RectF{ rect.pos + inset, rect.size - inset * 2.0 };
@@ -246,6 +305,203 @@ void MapSystem::updateTransform()
 Vec2 MapSystem::gridToWorld(const Point& gridPos) const
 {
 	return m_origin + Vec2{ m_tileSize.x * gridPos.x, m_tileSize.y * gridPos.y };
+}
+
+void MapSystem::setFogOfWarEnabled(bool enabled)
+{
+	if (m_fogOfWarEnabled == enabled)
+	{
+		return;
+	}
+
+	m_fogOfWarEnabled = enabled;
+	if (m_fogOfWarEnabled)
+	{
+		setAllVisible(false);
+	}
+	else
+	{
+		setAllVisible(true);
+	}
+}
+
+void MapSystem::revealAround(const Point& gridPos)
+{
+	if (not m_fogOfWarEnabled)
+	{
+		return;
+	}
+
+	static constexpr Point offsets[] = {
+		{ 0, 0 },
+		{ 1, 0 },
+		{ -1, 0 },
+		{ 0, 1 },
+		{ 0, -1 }
+	};
+
+	for (const auto& offset : offsets)
+	{
+		const Point target = gridPos + offset;
+		if (isInBounds(target))
+		{
+			m_tileVisibility[target.y][target.x] = true;
+		}
+	}
+}
+
+bool MapSystem::isTileVisible(const Point& gridPos) const
+{
+	if (not m_fogOfWarEnabled)
+	{
+		return true;
+	}
+
+	if (not isInBounds(gridPos))
+	{
+		return false;
+	}
+
+	return m_tileVisibility[gridPos.y][gridPos.x];
+}
+
+void MapSystem::initializeVisibility(bool visible)
+{
+	m_tileVisibility.clear();
+	m_tileVisibility.reserve(m_tiles.size());
+	for (const auto& row : m_tiles)
+	{
+		m_tileVisibility << Array<bool>(row.size(), visible);
+	}
+}
+
+void MapSystem::setAllVisible(bool visible)
+{
+	for (auto& row : m_tileVisibility)
+	{
+		for (auto& cell : row)
+		{
+			cell = visible;
+		}
+	}
+}
+
+bool MapSystem::isInBounds(const Point& gridPos) const
+{
+	if ((gridPos.y < 0) || (gridPos.y >= static_cast<int32>(m_tiles.size())))
+	{
+		return false;
+	}
+
+	if (gridPos.x < 0)
+	{
+		return false;
+	}
+
+	const auto rowSize = static_cast<int32>(m_tiles[gridPos.y].size());
+	return (gridPos.x < rowSize);
+}
+
+void MapSystem::revealRadius(const Point& gridPos, int32 radius)
+{
+	if (not m_fogOfWarEnabled)
+	{
+		return;
+	}
+
+	if (radius < 0)
+	{
+		return;
+	}
+
+	for (int32 dy = -radius; dy <= radius; ++dy)
+	{
+		for (int32 dx = -radius; dx <= radius; ++dx)
+		{
+			const Point target = gridPos + Point{ dx, dy };
+			if (isInBounds(target))
+			{
+				m_tileVisibility[target.y][target.x] = true;
+			}
+		}
+	}
+}
+
+int32 MapSystem::tileValue(const Point& gridPos) const
+{
+	if (not isInBounds(gridPos))
+	{
+		return 0;
+	}
+
+	return m_tiles[gridPos.y][gridPos.x];
+}
+
+bool MapSystem::isWalkable(const Point& gridPos) const
+{
+	return (tileValue(gridPos) != 0);
+}
+
+bool MapSystem::canEnter(const Point& gridPos) const
+{
+	if (not isWalkable(gridPos))
+	{
+		return false;
+	}
+
+	const int32 objectId = objectIdAt(gridPos);
+	if (objectId == 0)
+	{
+		return true;
+	}
+
+	return (not isObjectBlocking(objectId));
+}
+
+int32 MapSystem::objectIdAt(const Point& gridPos) const
+{
+	if ((gridPos.y < 0) || (gridPos.y >= static_cast<int32>(m_objectGrid.size())))
+	{
+		return 0;
+	}
+
+	const auto& row = m_objectGrid[gridPos.y];
+	if ((gridPos.x < 0) || (gridPos.x >= static_cast<int32>(row.size())))
+	{
+		return 0;
+	}
+
+	return row[gridPos.x];
+}
+
+bool MapSystem::hasObjectAt(const Point& gridPos) const
+{
+	return (objectIdAt(gridPos) != 0);
+}
+
+bool MapSystem::isObjectBlocking(int32 objectId) const
+{
+	return IsBlockingObject(ToMapObjectType(objectId));
+}
+
+void MapSystem::removeObjectAt(const Point& gridPos)
+{
+	if ((gridPos.y < 0) || (gridPos.y >= static_cast<int32>(m_objectGrid.size())))
+	{
+		return;
+	}
+
+	auto& row = m_objectGrid[gridPos.y];
+	if ((gridPos.x < 0) || (gridPos.x >= static_cast<int32>(row.size())))
+	{
+		return;
+	}
+
+	row[gridPos.x] = 0;
+	m_objectPlacements.remove_if([&](const ObjectPlacement& placement)
+	{
+		return placement.gridPos == gridPos;
+	});
 }
 
 

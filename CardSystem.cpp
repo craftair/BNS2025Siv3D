@@ -26,6 +26,8 @@ bool CardSystem::initialize(const FilePathView& libraryPath, const Array<String>
 	m_trashOrder.clear();
 	m_showTrash = false;
 	m_trashJustOpened = false;
+	m_cardPlayCallback = nullptr;
+	m_endTurnCallback = nullptr;
 
 	if (not m_library.loadFromJSON(libraryPath))
 	{
@@ -432,6 +434,11 @@ void CardSystem::endTurn()
 	m_trashScroll = 0.0;
 
 	drawHand(InitialHandSize);
+
+	if (m_endTurnCallback)
+	{
+		m_endTurnCallback();
+	}
 }
 
 void CardSystem::reloadDeckFromTrash()
@@ -601,6 +608,11 @@ void CardSystem::updateDragging(const Vec2& cursorVirtual)
 					if (m_playLog.size() > 6)
 					{
 						m_playLog.pop_back();
+					}
+
+					if (m_cardPlayCallback)
+					{
+						m_cardPlayCallback(card.definition->id);
 					}
 				}
 			}
@@ -870,6 +882,74 @@ void CardSystem::drawUI() const
 			m_bodyFont(U"Trash is empty!!!!").drawAt(emptyMessagePos, ColorF{ 0.8 });
 		}
 	}
+}
+
+Array<String> CardSystem::sampleCardIds(size_t count) const
+{
+	Array<String> result;
+	const auto& defs = m_library.definitions();
+	if (defs.isEmpty() || (count == 0))
+	{
+		return result;
+	}
+
+	Array<size_t> indices;
+	indices.reserve(defs.size());
+	for (size_t i = 0; i < defs.size(); ++i)
+	{
+		indices << i;
+	}
+
+	indices.shuffle();
+	const size_t limit = Min(count, indices.size());
+	for (size_t i = 0; i < limit; ++i)
+	{
+		result << defs[indices[i]].id;
+	}
+
+	return result;
+}
+
+bool CardSystem::addCardToDeck(const String& cardId)
+{
+	const auto* def = m_library.findDefinition(cardId);
+	if (not def)
+	{
+		return false;
+	}
+
+	auto& cards = m_deck.cards();
+	const size_t newIndex = cards.size();
+	auto& instance = m_deck.addCard(*def, Vec2::Zero(), def->size);
+	instance.inHand = false;
+	instance.inTrash = false;
+	instance.isUsed = false;
+	instance.isDragging = false;
+	instance.dragOffset = Vec2::Zero();
+	instance.homePosition = Vec2::Zero();
+	instance.rect.pos = Vec2::Zero();
+
+	if (std::find(m_drawPile.begin(), m_drawPile.end(), newIndex) == m_drawPile.end())
+	{
+		m_drawPile << newIndex;
+	}
+
+	m_drawPile.shuffle();
+	return true;
+}
+
+const Texture* CardSystem::textureForCard(const String& cardId) const
+{
+	if (const auto it = m_textures.find(cardId); it != m_textures.end())
+	{
+		return &(it->second);
+	}
+	return nullptr;
+}
+
+const CardDefinition* CardSystem::findCardDefinition(const String& cardId) const
+{
+	return m_library.findDefinition(cardId);
 }
 
 Vec2 CardSystem::toVirtual(const Vec2& screenPos) const

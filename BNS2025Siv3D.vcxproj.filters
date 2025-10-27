@@ -150,6 +150,9 @@
     <ClCompile Include="CardData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CardEffectController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="CardSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -852,6 +855,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Stage1.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MapObjectTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CardEffectController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CardData.h">

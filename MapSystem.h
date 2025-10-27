@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Common.h"
+#include "MapObjectTypes.h"
 
 class MapSystem
 {
@@ -12,15 +13,32 @@ public:
 	Vec2 origin() const { return m_origin; }
 	double scale() const { return m_scale; }
 	Vec2 offset() const { return m_offset; }
+	void setFogOfWarEnabled(bool enabled);
+	void revealAround(const Point& gridPos);
+	void revealRadius(const Point& gridPos, int32 radius);
+	bool isTileVisible(const Point& gridPos) const;
+	bool fogOfWarEnabled() const { return m_fogOfWarEnabled; }
+	bool isInBounds(const Point& gridPos) const;
+	bool isWalkable(const Point& gridPos) const;
+	bool canEnter(const Point& gridPos) const;
+	int32 tileValue(const Point& gridPos) const;
+	int32 objectIdAt(const Point& gridPos) const;
+	bool hasObjectAt(const Point& gridPos) const;
+	bool isObjectBlocking(int32 objectId) const;
+	void removeObjectAt(const Point& gridPos);
 
 private:
 	void updateTransform();
+	void initializeVisibility(bool visible);
+	void setAllVisible(bool visible);
 
 	Vec2 m_virtualSize{ 1280, 720 };
 	Vec2 m_tileSize{ 96, 96 };
 	Vec2 m_origin{ 0, 0 };
 	Texture m_tileTexture;
 	Array<Array<int32>> m_tiles;
+	Array<Array<int32>> m_objectGrid;
+	Array<Array<bool>> m_tileVisibility;
 
 	struct ObjectPlacement
 	{
@@ -31,6 +49,8 @@ private:
 	HashTable<int32, Texture> m_objectTextures;
 	Array<ObjectPlacement> m_objectPlacements;
 
+	Texture m_fogTexture;
 	double m_scale = 1.0;
 	Vec2 m_offset{ 0, 0 };
+	bool m_fogOfWarEnabled = false;
 };
