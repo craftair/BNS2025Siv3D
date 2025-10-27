@@ -19,6 +19,7 @@ struct CardInstance
 	bool isDragging = false;
 	Vec2 dragOffset = Vec2::Zero();
 	bool isUsed = false;
+	bool inHand = false;
 	bool inTrash = false;
 
 	RectF bounds() const { return rect; }
