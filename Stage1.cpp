@@ -21,7 +21,7 @@ Stage1::Stage1(const InitData& init)
 	config.virtualSize = virtualSize;
 	config.margin = 32.0;
 	config.gap = 18.0;
-	config.columns = starterIds.size();
+	config.columns = 4;
 	config.activationOffset = 40.0;
 
 	if (not m_cardSystem.initialize(U"cards/cards.json", starterIds, config))

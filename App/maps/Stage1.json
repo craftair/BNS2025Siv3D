@@ -41,24 +41,24 @@
               ],
     "objectDefinitions":  [
                               {
-                                  "texture":  "field/hako-only.png",
-                                  "id":  2
+                                  "texture":  "field/box.png",
+                                  "id":  1
                               },
                               {
-                                  "texture":  "field/takarabako-only.png",
-                                  "id":  3
+                                  "texture":  "field/treasurebox.png",
+                                  "id":  2
                               }
                           ],
     "objectPlacements":  [
                              {
-                                 "id":  2,
+                                 "id":  1,
                                  "position":  [
                                                   1,
                                                   0
                                               ]
                              },
                              {
-                                 "id":  3,
+                                 "id":  2,
                                  "position":  [
                                                   4,
                                                   2

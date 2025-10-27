@@ -106,6 +106,7 @@ void CardDeck::resetUsage()
 	for (auto& card : m_cards)
 	{
 		card.isUsed = false;
+		card.inHand = false;
 		card.inTrash = false;
 		card.rect.pos = card.homePosition;
 		card.isDragging = false;

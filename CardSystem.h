@@ -21,7 +21,13 @@ public:
 
 private:
 	void loadTextures();
-	void setupInitialLayout();
+	void layoutHand();
+	void resetDeckState();
+	size_t drawFromDeck(size_t count);
+	void removeFromHand(size_t cardIndex);
+	void drawHand(size_t desiredCount);
+	void endTurn();
+	void reloadDeckFromTrash();
 	void updateTransform();
 	void updateCards();
 	void updateDragging(const Vec2& cursorVirtual);
@@ -48,9 +54,19 @@ private:
 	Array<size_t> m_trashOrder;
 	bool m_showTrash = false;
 	bool m_trashJustOpened = false;
+	bool m_showDeck = false;
+	bool m_deckJustOpened = false;
 	RectF m_trashButtonScreen{ 0, 0, 0, 0 };
+	RectF m_endTurnButtonScreen{ 0, 0, 0, 0 };
+	RectF m_deckButtonScreen{ 0, 0, 0, 0 };
 	Vec2 m_trashModalSize{ 940, 580 };
+	Vec2 m_deckModalSize{ 940, 580 };
 	RectF m_trashModalRect{ 0, 0, 0, 0 };
+	RectF m_deckModalRect{ 0, 0, 0, 0 };
 	RectF m_trashCloseButton{ 0, 0, 0, 0 };
+	RectF m_deckCloseButton{ 0, 0, 0, 0 };
 	double m_trashScroll = 0.0;
+	double m_deckScroll = 0.0;
+	Array<size_t> m_drawPile;
+	Array<size_t> m_handIndices;
 };

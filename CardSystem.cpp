@@ -1,4 +1,5 @@
 ﻿#include "CardSystem.h"
+#include <algorithm>
 namespace
 {
 	constexpr double TrashPaddingLeft = 24.0;
@@ -7,6 +8,8 @@ namespace
 	constexpr double TrashPaddingBottom = 72.0;
 	const Vec2 TrashCardSize{ 180, 248 };
 	const Vec2 TrashCardSpacing{ 26, 20 };
+	constexpr size_t DeckCopiesPerCard = 2;
+	constexpr size_t InitialHandSize = 4;
 }
 
 bool CardSystem::initialize(const FilePathView& libraryPath, const Array<String>& deckIds, const CardHandConfig& config)
@@ -47,10 +50,14 @@ bool CardSystem::initialize(const FilePathView& libraryPath, const Array<String>
 
 	for (const auto* def : deckDefinitions)
 	{
-		m_deck.addCard(*def, Vec2::Zero(), def->size);
+		for (size_t copy = 0; copy < DeckCopiesPerCard; ++copy)
+		{
+			auto& card = m_deck.addCard(*def, Vec2::Zero(), def->size);
+			card.inHand = false;
+		}
 	}
 
-	setupInitialLayout();
+	resetDeckState();
 	return true;
 }
 
@@ -59,11 +66,78 @@ void CardSystem::update()
 	updateTransform();
 	updateCards();
 
+	if (m_endTurnButtonScreen.leftClicked())
+	{
+		endTurn();
+	}
+
+	if (m_deckButtonScreen.leftClicked())
+	{
+		m_showDeck = (not m_showDeck);
+		m_deckJustOpened = m_showDeck;
+		if (m_showDeck)
+		{
+			m_showTrash = false;
+			m_trashScroll = 0.0;
+		}
+	}
+
 	if (m_trashButtonScreen.leftClicked())
 	{
 		m_showTrash = (not m_showTrash);
 		m_trashJustOpened = m_showTrash;
+		if (m_showTrash)
+		{
+			m_showDeck = false;
+			m_deckScroll = 0.0;
+		}
 	}
+
+	if (m_showDeck)
+	{
+		const Vec2 cardSize = TrashCardSize;
+		const Vec2 spacing = TrashCardSpacing;
+		const double contentWidth = m_deckModalSize.x - (TrashPaddingLeft + TrashPaddingRight);
+		const double unitWidth = cardSize.x + spacing.x;
+		const int32 columns = Max<int32>(1, static_cast<int32>((contentWidth + spacing.x) / unitWidth));
+		const int32 totalCards = static_cast<int32>(m_drawPile.size());
+		const int32 rows = (totalCards + columns - 1) / columns;
+		const double contentHeight = (rows > 0) ? rows * (cardSize.y + spacing.y) - spacing.y : 0.0;
+		const double viewHeight = m_deckModalSize.y - (TrashPaddingTop + TrashPaddingBottom);
+
+		if (contentHeight > viewHeight)
+		{
+			m_deckScroll -= Mouse::Wheel() * 32.0;
+			m_deckScroll = Clamp(m_deckScroll, 0.0, Max(0.0, contentHeight - viewHeight));
+		}
+		else
+		{
+			m_deckScroll = 0.0;
+		}
+
+		if (not m_deckJustOpened)
+		{
+			if (m_deckCloseButton.leftClicked())
+			{
+				m_showDeck = false;
+			}
+			else if (MouseL.down() && (not m_deckModalRect.contains(Cursor::PosF())) && (not m_deckButtonScreen.contains(Cursor::PosF())))
+			{
+				m_showDeck = false;
+			}
+
+			if (KeyEscape.down())
+			{
+				m_showDeck = false;
+			}
+		}
+	}
+	else
+	{
+		m_deckScroll = 0.0;
+	}
+
+	m_deckJustOpened = false;
 
 	if (m_showTrash)
 	{
@@ -120,11 +194,7 @@ void CardSystem::draw() const
 
 void CardSystem::resetUsage()
 {
-	m_deck.resetUsage();
-	m_playLog.clear();
-	m_trashOrder.clear();
-	m_showTrash = false;
-	m_trashJustOpened = false;
+	resetDeckState();
 }
 
 void CardSystem::loadTextures()
@@ -150,16 +220,92 @@ void CardSystem::loadTextures()
 	}
 }
 
-void CardSystem::setupInitialLayout()
+void CardSystem::resetDeckState()
 {
 	auto& cards = m_deck.cards();
-	if (cards.isEmpty())
+	m_playLog.clear();
+	m_trashOrder.clear();
+	m_showTrash = false;
+	m_trashJustOpened = false;
+	m_trashScroll = 0.0;
+	m_showDeck = false;
+	m_deckJustOpened = false;
+	m_deckScroll = 0.0;
+	m_draggingIndex.reset();
+	m_drawPile.clear();
+	m_handIndices.clear();
+
+	for (size_t i = 0; i < cards.size(); ++i)
+	{
+		auto& card = cards[i];
+		card.isUsed = false;
+		card.inTrash = false;
+		card.isDragging = false;
+		card.dragOffset = Vec2::Zero();
+		card.inHand = false;
+		card.homePosition = Vec2::Zero();
+		card.rect.pos = Vec2::Zero();
+		m_drawPile << i;
+	}
+
+	if (m_drawPile.isEmpty())
 	{
 		m_activationLine = m_virtualSize.y * 0.65;
 		return;
 	}
 
-	const size_t count = cards.size();
+	m_drawPile.shuffle();
+
+	drawHand(InitialHandSize);
+}
+
+size_t CardSystem::drawFromDeck(size_t count)
+{
+	size_t drawn = 0;
+	auto& cards = m_deck.cards();
+
+	for (size_t i = 0; i < count && not m_drawPile.isEmpty(); ++i)
+	{
+		const size_t cardIndex = m_drawPile.back();
+		m_drawPile.pop_back();
+
+		auto& card = cards[cardIndex];
+		card.isUsed = false;
+		card.inTrash = false;
+		card.inHand = true;
+		card.isDragging = false;
+		card.dragOffset = Vec2::Zero();
+		card.homePosition = Vec2::Zero();
+		card.rect.pos = Vec2::Zero();
+
+		if (std::find(m_handIndices.begin(), m_handIndices.end(), cardIndex) == m_handIndices.end())
+		{
+			m_handIndices << cardIndex;
+		}
+
+		++drawn;
+	}
+
+	return drawn;
+}
+
+void CardSystem::removeFromHand(size_t cardIndex)
+{
+	const auto it = std::remove(m_handIndices.begin(), m_handIndices.end(), cardIndex);
+	m_handIndices.erase(it, m_handIndices.end());
+	layoutHand();
+}
+
+void CardSystem::layoutHand()
+{
+	auto& cards = m_deck.cards();
+	if (m_handIndices.isEmpty())
+	{
+		m_activationLine = m_virtualSize.y * 0.65;
+		return;
+	}
+
+	const size_t count = m_handIndices.size();
 	const size_t columns = (m_config.columns > 0) ? Min(m_config.columns, count) : count;
 	const size_t rows = (count + columns - 1) / columns;
 
@@ -168,7 +314,7 @@ void CardSystem::setupInitialLayout()
 
 	for (size_t i = 0; i < count; ++i)
 	{
-		const auto& card = cards[i];
+		const auto& card = cards[m_handIndices[i]];
 		const size_t col = i % columns;
 		const size_t row = i / columns;
 		columnWidths[col] = Max(columnWidths[col], card.rect.w);
@@ -221,7 +367,7 @@ void CardSystem::setupInitialLayout()
 
 	for (size_t i = 0; i < count; ++i)
 	{
-		auto& card = cards[i];
+		auto& card = cards[m_handIndices[i]];
 		const size_t col = i % columns;
 		const size_t row = i / columns;
 		const Vec2 pos{
@@ -230,11 +376,98 @@ void CardSystem::setupInitialLayout()
 		};
 		card.rect.pos = pos;
 		card.homePosition = pos;
-		card.isUsed = false;
-		card.inTrash = false;
+		card.inHand = true;
 	}
 
 	m_activationLine = Max(0.0, startY - m_config.activationOffset);
+}
+
+void CardSystem::drawHand(size_t desiredCount)
+{
+	while (m_handIndices.size() < desiredCount)
+	{
+		if (drawFromDeck(1) == 0)
+		{
+			reloadDeckFromTrash();
+			if (drawFromDeck(1) == 0)
+			{
+				break;
+			}
+		}
+	}
+
+	layoutHand();
+}
+
+void CardSystem::endTurn()
+{
+	auto& cards = m_deck.cards();
+
+	for (const size_t index : m_handIndices)
+	{
+		if (index >= cards.size())
+		{
+			continue;
+		}
+
+		auto& card = cards[index];
+		if (card.inHand && not card.inTrash)
+		{
+			card.isUsed = true;
+			card.inTrash = true;
+			card.inHand = false;
+			card.isDragging = false;
+			card.dragOffset = Vec2::Zero();
+			m_trashOrder << index;
+		}
+	}
+
+	m_handIndices.clear();
+	m_draggingIndex.reset();
+	m_showDeck = false;
+	m_deckJustOpened = false;
+	m_showTrash = false;
+	m_trashJustOpened = false;
+	m_deckScroll = 0.0;
+	m_trashScroll = 0.0;
+
+	drawHand(InitialHandSize);
+}
+
+void CardSystem::reloadDeckFromTrash()
+{
+	if (m_trashOrder.isEmpty())
+	{
+		return;
+	}
+
+	auto& cards = m_deck.cards();
+
+	for (const size_t index : m_trashOrder)
+	{
+		if (index >= cards.size())
+		{
+			continue;
+		}
+
+		auto& card = cards[index];
+		card.isUsed = false;
+		card.inTrash = false;
+		card.inHand = false;
+		card.isDragging = false;
+		card.dragOffset = Vec2::Zero();
+		card.homePosition = Vec2::Zero();
+		card.rect.pos = Vec2::Zero();
+		if (std::find(m_drawPile.begin(), m_drawPile.end(), index) == m_drawPile.end())
+		{
+			m_drawPile << index;
+		}
+	}
+
+	m_trashOrder.clear();
+	m_drawPile.shuffle();
+	m_trashScroll = 0.0;
+	m_deckScroll = 0.0;
 }
 
 void CardSystem::updateTransform()
@@ -250,21 +483,47 @@ void CardSystem::updateTransform()
 
 	const double buttonWidth = 160.0;
 	const double buttonHeight = 60.0;
-	double buttonX = m_offset.x + m_virtualSize.x * m_scale + 60.0;
-	double buttonY = m_offset.y + m_virtualSize.y * m_scale - buttonHeight - 40.0;
-	if (buttonX + buttonWidth > sceneWidth - 20.0)
+	const double buttonSpacing = 16.0;
+	double trashButtonX = m_offset.x + m_virtualSize.x * m_scale + 60.0;
+	double baseButtonY = m_offset.y + m_virtualSize.y * m_scale - buttonHeight - 40.0;
+	if (trashButtonX + buttonWidth > sceneWidth - 20.0)
 	{
-		buttonX = sceneWidth - buttonWidth - 20.0;
+		trashButtonX = sceneWidth - buttonWidth - 20.0;
 	}
-	if (buttonY + buttonHeight > sceneHeight - 20.0)
+	if (baseButtonY + buttonHeight > sceneHeight - 20.0)
 	{
-		buttonY = sceneHeight - buttonHeight - 20.0;
+		baseButtonY = sceneHeight - buttonHeight - 20.0;
 	}
-	m_trashButtonScreen = RectF{ buttonX, buttonY, buttonWidth, buttonHeight };
+	double deckButtonX = m_offset.x - buttonWidth - 60.0;
+	if (deckButtonX < 20.0)
+	{
+		deckButtonX = 20.0;
+	}
+	if (baseButtonY < 20.0)
+	{
+		baseButtonY = 20.0;
+	}
+	double trashButtonY = baseButtonY;
+	double endTurnButtonY = trashButtonY - (buttonHeight + buttonSpacing);
+	if (endTurnButtonY < 20.0)
+	{
+		endTurnButtonY = 20.0;
+		trashButtonY = endTurnButtonY + buttonHeight + buttonSpacing;
+		if (trashButtonY + buttonHeight > sceneHeight - 20.0)
+		{
+			trashButtonY = sceneHeight - buttonHeight - 20.0;
+		}
+	}
+
+	m_trashButtonScreen = RectF{ trashButtonX, trashButtonY, buttonWidth, buttonHeight };
+	m_endTurnButtonScreen = RectF{ trashButtonX, endTurnButtonY, buttonWidth, buttonHeight };
+	m_deckButtonScreen = RectF{ deckButtonX, trashButtonY, buttonWidth, buttonHeight };
 
 	const Vec2 modalPos{ (sceneWidth - m_trashModalSize.x) * 0.5, (sceneHeight - m_trashModalSize.y) * 0.5 };
 	m_trashModalRect = RectF{ modalPos, m_trashModalSize };
 	m_trashCloseButton = RectF{ m_trashModalRect.tr().movedBy(-46, 6), Vec2{ 36, 36 } };
+	m_deckModalRect = RectF{ modalPos, m_deckModalSize };
+	m_deckCloseButton = RectF{ m_deckModalRect.tr().movedBy(-46, 6), Vec2{ 36, 36 } };
 }
 
 void CardSystem::updateCards()
@@ -276,7 +535,7 @@ void CardSystem::updateCards()
 
 	for (auto& card : cards)
 	{
-		if (card.inTrash)
+		if (card.inTrash || (not card.inHand))
 		{
 			continue;
 		}
@@ -297,7 +556,7 @@ void CardSystem::updateDragging(const Vec2& cursorVirtual)
 		for (int32 i = static_cast<int32>(cards.size()) - 1; i >= 0; --i)
 		{
 			auto& card = cards[i];
-			if (card.isUsed)
+			if (card.isUsed || card.inTrash || (not card.inHand))
 			{
 				continue;
 			}
@@ -331,6 +590,8 @@ void CardSystem::updateDragging(const Vec2& cursorVirtual)
 				{
 					card.isUsed = true;
 					card.inTrash = true;
+					card.inHand = false;
+					removeFromHand(*m_draggingIndex);
 					m_trashOrder << *m_draggingIndex;
 				}
 
@@ -362,21 +623,29 @@ void CardSystem::drawScene() const
 
 	const auto& cards = m_deck.cards();
 	Array<size_t> order;
-	order.reserve(cards.size());
+	order.reserve(m_handIndices.size());
 
-	for (size_t i = 0; i < cards.size(); ++i)
+	for (const size_t index : m_handIndices)
 	{
-		if (not cards[i].isDragging)
+		if (cards[index].inTrash || (not cards[index].inHand))
 		{
-			order << i;
+			continue;
+		}
+		if (not cards[index].isDragging)
+		{
+			order << index;
 		}
 	}
 
-	for (size_t i = 0; i < cards.size(); ++i)
+	for (const size_t index : m_handIndices)
 	{
-		if (cards[i].isDragging)
+		if (cards[index].inTrash || (not cards[index].inHand))
 		{
-			order << i;
+			continue;
+		}
+		if (cards[index].isDragging)
+		{
+			order << index;
 		}
 	}
 
@@ -425,14 +694,106 @@ void CardSystem::drawUI() const
 		m_bodyFont(Format(U"- ", m_playLog[i])).draw(logPos + Vec2{ 0, i * 24.0 }, ColorF{ 0.82 });
 	}
 
-	const ColorF buttonColor = m_showTrash ? ColorF{ 0.35, 0.25, 0.45, 0.9 } : ColorF{ 0.25, 0.22, 0.32, 0.85 };
 	const ColorF frameColor = ColorF{ 0.6, 0.55, 0.8, 0.9 };
-	const RectF buttonRect = m_trashButtonScreen;
-	buttonRect.rounded(12).draw(buttonColor);
-	buttonRect.rounded(12).drawFrame(2, 0, frameColor);
-	m_bodyFont(Format(U"Trash (", m_trashOrder.size(), U")")).drawAt(buttonRect.center(), ColorF{ 0.95 });
+	const RectF endTurnButtonRect = m_endTurnButtonScreen;
+	const bool endTurnHovered = endTurnButtonRect.mouseOver();
+	const ColorF endTurnColor = endTurnHovered ? ColorF{ 0.68, 0.38, 0.28, 0.95 } : ColorF{ 0.58, 0.32, 0.24, 0.9 };
+	endTurnButtonRect.rounded(12).draw(endTurnColor);
+	endTurnButtonRect.rounded(12).drawFrame(2, 0, frameColor);
+	m_bodyFont(U"ターン終了").drawAt(endTurnButtonRect.center(), ColorF{ 0.95 });
 
-	if (m_showTrash)
+	const ColorF deckButtonColor = m_showDeck ? ColorF{ 0.28, 0.35, 0.32, 0.9 } : ColorF{ 0.22, 0.28, 0.26, 0.85 };
+	const RectF deckButtonRect = m_deckButtonScreen;
+	deckButtonRect.rounded(12).draw(deckButtonColor);
+	deckButtonRect.rounded(12).drawFrame(2, 0, frameColor);
+	m_bodyFont(Format(U"Deck (", m_drawPile.size(), U")")).drawAt(deckButtonRect.center(), ColorF{ 0.95 });
+
+	const ColorF trashButtonColor = m_showTrash ? ColorF{ 0.35, 0.25, 0.45, 0.9 } : ColorF{ 0.25, 0.22, 0.32, 0.85 };
+	const RectF trashButtonRect = m_trashButtonScreen;
+	trashButtonRect.rounded(12).draw(trashButtonColor);
+	trashButtonRect.rounded(12).drawFrame(2, 0, frameColor);
+	m_bodyFont(Format(U"Trash (", m_trashOrder.size(), U")")).drawAt(trashButtonRect.center(), ColorF{ 0.95 });
+
+	if (m_showDeck)
+	{
+		RectF{ 0, 0, Scene::Width(), Scene::Height() }.draw(ColorF{ 0, 0, 0, 0.55 });
+
+		const RectF modal = m_deckModalRect;
+		modal.rounded(18).draw(ColorF{ 0.08, 0.1, 0.1, 0.96 });
+		modal.rounded(18).drawFrame(3, 0, ColorF{ 0.4, 0.55, 0.55, 0.9 });
+		m_bodyFont(U"Deck").draw(modal.pos.movedBy(28, 22), ColorF{ 0.95 });
+
+		const RectF closeButton = m_deckCloseButton;
+		closeButton.rounded(10).draw(ColorF{ 0.3, 0.32, 0.3, 0.9 });
+		closeButton.rounded(10).drawFrame(2, 0, frameColor);
+		m_bodyFont(U"X").drawAt(closeButton.center(), ColorF{ 0.95 });
+
+		const auto& cards = m_deck.cards();
+		const Vec2 cardSize = TrashCardSize;
+		const Vec2 spacing = TrashCardSpacing;
+		const Vec2 contentOrigin = modal.pos.movedBy(TrashPaddingLeft, TrashPaddingTop);
+		const Vec2 contentAreaSize{
+			m_deckModalSize.x - (TrashPaddingLeft + TrashPaddingRight),
+			m_deckModalSize.y - (TrashPaddingTop + TrashPaddingBottom)
+		};
+		const RectF clipRect{ contentOrigin, contentAreaSize };
+		clipRect.drawFrame(2, 0, ColorF{ 0.25, 0.32, 0.32, 0.9 });
+
+		const double availableWidth = Max(0.0, contentAreaSize.x);
+		const double unitWidth = cardSize.x + spacing.x;
+		const int32 maxColumns = (unitWidth > 0.0) ? static_cast<int32>(Math::Floor((availableWidth + spacing.x) / unitWidth)) : 1;
+		const int32 columns = Max<int32>(1, maxColumns);
+		const double viewTop = contentOrigin.y;
+		const double viewBottom = viewTop + contentAreaSize.y;
+
+		Array<size_t> deckOrder = m_drawPile;
+		std::reverse(deckOrder.begin(), deckOrder.end());
+
+		int32 index = 0;
+		for (const size_t deckIndex : deckOrder)
+		{
+			if (deckIndex >= cards.size())
+			{
+				++index;
+				continue;
+			}
+
+			const auto& card = cards[deckIndex];
+			if (not card.definition)
+			{
+				++index;
+				continue;
+			}
+
+			const int32 row = index / columns;
+			const int32 col = index % columns;
+			const Vec2 pos{
+				contentOrigin.x + col * unitWidth,
+				contentOrigin.y + row * (cardSize.y + spacing.y) - m_deckScroll
+			};
+
+			RectF cardRect{ pos, cardSize };
+			const double cardBottom = cardRect.y + cardRect.h;
+			if ((cardBottom < viewTop) || (cardRect.y > viewBottom))
+			{
+				++index;
+				continue;
+			}
+
+			if (const auto textureIt = m_textures.find(card.definition->id); textureIt != m_textures.end())
+			{
+				textureIt->second.resized(cardRect.size).draw(cardRect.pos);
+			}
+			cardRect.drawFrame(3, 0, ColorF{ 0.18, 0.25, 0.23, 0.85 });
+			++index;
+		}
+
+		if (deckOrder.isEmpty())
+		{
+			m_bodyFont(U"Deck is empty!").drawAt(clipRect.center(), ColorF{ 0.8 });
+		}
+	}
+	else if (m_showTrash)
 	{
 		RectF{ 0, 0, Scene::Width(), Scene::Height() }.draw(ColorF{ 0, 0, 0, 0.55 });
 
@@ -461,30 +822,40 @@ void CardSystem::drawUI() const
 		const double unitWidth = cardSize.x + spacing.x;
 		const int32 maxColumns = (unitWidth > 0.0) ? static_cast<int32>(Math::Floor((availableWidth + spacing.x) / unitWidth)) : 1;
 		const int32 columns = Max<int32>(1, maxColumns);
-
-		const Rect scissor = clipRect.asRect();
-		ScopedViewport2D viewport{ scissor };
-		const Transformer2D transform{ Mat3x2::Translate(contentOrigin.x, contentOrigin.y - m_trashScroll) };
+		const double viewTop = contentOrigin.y;
+		const double viewBottom = viewTop + contentAreaSize.y;
 
 		int32 index = 0;
 		for (const size_t deckIndex : m_trashOrder)
 		{
 			if (deckIndex >= cards.size())
 			{
+				++index;
 				continue;
 			}
 
 			const auto& card = cards[deckIndex];
 			if (not card.definition)
 			{
+				++index;
 				continue;
 			}
 
 			const int32 row = index / columns;
 			const int32 col = index % columns;
-			const Vec2 pos{ col * unitWidth, row * (cardSize.y + spacing.y) };
+			const Vec2 pos{
+				contentOrigin.x + col * unitWidth,
+				contentOrigin.y + row * (cardSize.y + spacing.y) - m_trashScroll
+			};
 
 			RectF cardRect{ pos, cardSize };
+			const double cardBottom = cardRect.y + cardRect.h;
+			if ((cardBottom < viewTop) || (cardRect.y > viewBottom))
+			{
+				++index;
+				continue;
+			}
+
 			if (const auto textureIt = m_textures.find(card.definition->id); textureIt != m_textures.end())
 			{
 				textureIt->second.resized(cardRect.size).draw(cardRect.pos);
@@ -495,7 +866,8 @@ void CardSystem::drawUI() const
 
 		if (m_trashOrder.empty())
 		{
-			m_bodyFont(U"Trash is empty!!!!").drawAt(modal.center(), ColorF{ 0.8 });
+			const Vec2 emptyMessagePos = clipRect.center();
+			m_bodyFont(U"Trash is empty!!!!").drawAt(emptyMessagePos, ColorF{ 0.8 });
 		}
 	}
 }
