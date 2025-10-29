@@ -1,7 +1,7 @@
 ﻿{
     "tile":  {
                  "size":  [64,64],
-                 "texture":  "field/mapsquare.png"
+                 "texture":  "resources/texture/field/mapsquare.png"
              },
     "origin":  [520,180],
     "tiles":  [
@@ -11,15 +11,15 @@
               ],
     "objectDefinitions":  [
                               {
-                                  "texture":  "field/box.png",
+                                  "texture":  "resources/texture/field/box.png",
                                   "id":  1
                               },
                               {
-                                  "texture":  "field/treasurebox.png",
+                                  "texture":  "resources/texture/field/treasurebox.png",
                                   "id":  2
                               },
                               {
-                                  "texture":  "field/pillar.png",
+                                  "texture":  "resources/texture/field/pillar.png",
                                   "id":  7
                               }
                           ],

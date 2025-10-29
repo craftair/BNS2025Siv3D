@@ -3,6 +3,11 @@
 #include "Title.h"
 #include "Monolog.h"
 #include "Stage1.h"
+#include "Stage2.h"
+#include "Stage3.h"
+#include "Stage4.h"
+#include "Stage5.h"
+#include "Ending.h"
 
 void Settings(GameData& data, App& manager, Array<Texture> textures)
 {
@@ -52,6 +57,11 @@ void Main()
 	manager.add<Title>(State::Title);
 	manager.add<Monolog>(State::Monolog);
 	manager.add<Stage1>(State::Stage1);
+	manager.add<Stage2>(State::Stage2);
+	manager.add<Stage3>(State::Stage3);
+	manager.add<Stage4>(State::Stage4);
+	manager.add<Stage5>(State::Stage5);
+	manager.add<Ending>(State::Ending);
 
 	auto gameData = manager.get();
 

@@ -127,7 +127,7 @@ bool MapSystem::loadFromJSON(const FilePathView& path, const Vec2& virtualSize)
 	// Try to load a default fog texture used to cover unrevealed tiles.
 	try
 	{
-		m_fogTexture = Texture{ U"field/Box2.png", TextureDesc::Mipped };
+		m_fogTexture = Texture{ U"resources/texture/field/Box2.png", TextureDesc::Mipped };
 	}
 	catch (...)
 	{

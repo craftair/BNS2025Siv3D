@@ -1,17 +1,7 @@
-﻿#include "Stage5.h"
+#include "Stage5.h"
 
 Stage5::Stage5(const InitData& init)
-	: IScene{ init }
+	: StageScene{ init, StageConfig{ .stageIndex = 5, .nextState = State::Ending, .nextButtonText = U"エンディングへ" } }
 {
-
 }
 
-void Stage5::update()
-{
-
-}
-
-void Stage5::draw() const
-{
-	Scene::SetBackground(ColorF{ 1.0 });
-}

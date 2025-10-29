@@ -19,6 +19,7 @@ struct GameData
 	bool showSettings = false;
 	double bgmVolume = 1.0;
 	double seVolume = 1.0;
+	int32 totalActions = 0;
 };
 
 using App = SceneManager<State, GameData>;

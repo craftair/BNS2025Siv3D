@@ -1,17 +1,7 @@
-﻿#include "Stage3.h"
+#include "Stage3.h"
 
 Stage3::Stage3(const InitData& init)
-	: IScene{ init }
+	: StageScene{ init, StageConfig{ .stageIndex = 3, .nextState = State::Stage4 } }
 {
-
 }
 
-void Stage3::update()
-{
-
-}
-
-void Stage3::draw() const
-{
-	Scene::SetBackground(ColorF{ 1.0 });
-}
