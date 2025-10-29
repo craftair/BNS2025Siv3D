@@ -26,6 +26,9 @@ public:
 	bool hasObjectAt(const Point& gridPos) const;
 	bool isObjectBlocking(int32 objectId) const;
 	void removeObjectAt(const Point& gridPos);
+	Array<Array<bool>> visibilitySnapshot() const;
+	void applyVisibility(const Array<Array<bool>>& visibility);
+	void revealAll();
 
 private:
 	void updateTransform();

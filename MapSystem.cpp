@@ -427,6 +427,34 @@ void MapSystem::revealRadius(const Point& gridPos, int32 radius)
 	}
 }
 
+Array<Array<bool>> MapSystem::visibilitySnapshot() const
+{
+	return m_tileVisibility;
+}
+
+void MapSystem::applyVisibility(const Array<Array<bool>>& visibility)
+{
+	if (visibility.size() != m_tileVisibility.size())
+	{
+		return;
+	}
+
+	for (size_t y = 0; y < visibility.size(); ++y)
+	{
+		if (visibility[y].size() != m_tileVisibility[y].size())
+		{
+			return;
+		}
+	}
+
+	m_tileVisibility = visibility;
+}
+
+void MapSystem::revealAll()
+{
+	setAllVisible(true);
+}
+
 int32 MapSystem::tileValue(const Point& gridPos) const
 {
 	if (not isInBounds(gridPos))

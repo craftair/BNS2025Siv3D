@@ -48,7 +48,7 @@ StageScene::StageScene(const InitData& init, StageConfig config)
 	m_resultRecorded = false;
 	m_treasureSelection = TreasureSelection{};
 	m_treasureHover.reset();
-	m_cardEffects.initialize(&m_mapSystem, &m_player);
+	m_cardEffects.initialize(&m_mapSystem, &m_player, &m_cardSystem, this);
 	m_pendingKanjiReward.reset();
 	m_pendingRewardCards.clear();
 
@@ -63,6 +63,13 @@ StageScene::StageScene(const InitData& init, StageConfig config)
 	{
 		onEndTurn();
 	});
+
+	m_maxActions = 5;
+	m_actionsRemaining = m_maxActions;
+	m_promoteShinToKami = false;
+	m_fullVisibilityActive = false;
+	m_fullVisibilityBackup.clear();
+	m_ignoreTileDebuffsThisTurn = false;
 
 	auto& data = getData();
 	for (const auto& info : KanjiSystem::allKanji())
@@ -84,6 +91,58 @@ StageScene::StageScene(const InitData& init, StageConfig config)
 	}
 
 	m_previousPlayerGrid = m_player.gridPosition();
+}
+
+void StageScene::activateYakuEffect()
+{
+	m_promoteShinToKami = true;
+	m_cardSystem.addCardToDeck(U"soku");
+}
+
+void StageScene::healActionsToFull()
+{
+	m_actionsRemaining = m_maxActions;
+}
+
+void StageScene::activateFullMapVision()
+{
+	if (not m_mapSystem.fogOfWarEnabled())
+	{
+		return;
+	}
+
+	if (not m_fullVisibilityActive)
+	{
+		m_fullVisibilityBackup = m_mapSystem.visibilitySnapshot();
+		m_mapSystem.revealAll();
+		m_fullVisibilityActive = true;
+	}
+}
+
+void StageScene::deactivateFullMapVision()
+{
+	if (not m_fullVisibilityActive)
+	{
+		return;
+	}
+
+	if (m_mapSystem.fogOfWarEnabled() && (not m_fullVisibilityBackup.isEmpty()))
+	{
+		m_mapSystem.applyVisibility(m_fullVisibilityBackup);
+	}
+
+	m_fullVisibilityBackup.clear();
+	m_fullVisibilityActive = false;
+}
+
+void StageScene::activateDebuffImmunity()
+{
+	m_ignoreTileDebuffsThisTurn = true;
+}
+
+void StageScene::clearDebuffImmunity()
+{
+	m_ignoreTileDebuffsThisTurn = false;
 }
 
 void StageScene::update()
@@ -112,6 +171,8 @@ void StageScene::update()
 	{
 		m_cardSystem.resetUsage();
 		m_cardEffects.clearAllEffects();
+		deactivateFullMapVision();
+		clearDebuffImmunity();
 	}
 
 	const Point before = m_player.gridPosition();
@@ -177,6 +238,8 @@ void StageScene::onEndTurn()
 	}
 
 	m_cardEffects.clearAllEffects();
+	deactivateFullMapVision();
+	clearDebuffImmunity();
 	modifyActionPoints(-1);
 }
 
@@ -193,7 +256,8 @@ void StageScene::modifyActionPoints(int32 delta)
 	}
 
 	const int64 updated = static_cast<int64>(m_actionsRemaining) + static_cast<int64>(delta);
-	m_actionsRemaining = static_cast<int32>(Max<int64>(0, updated));
+	const int64 clamped = Clamp<int64>(updated, 0, static_cast<int64>(m_maxActions));
+	m_actionsRemaining = static_cast<int32>(clamped);
 
 	if (m_actionsRemaining <= 0)
 	{
@@ -211,6 +275,8 @@ void StageScene::handleGameOver()
 
 	m_gameOver = true;
 	m_cardEffects.clearAllEffects();
+	deactivateFullMapVision();
+	clearDebuffImmunity();
 	changeScene(State::Ending);
 }
 
@@ -247,6 +313,11 @@ void StageScene::handleTileInteractions(const Point& previous, const Point& curr
 		m_mapSystem.removeObjectAt(current);
 		return;
 	case MapObjectType::Camera:
+		if (m_ignoreTileDebuffsThisTurn)
+		{
+			m_mapSystem.removeObjectAt(current);
+			return;
+		}
 		m_player.setGridPosition(previous, m_mapSystem);
 		m_mapSystem.revealAround(m_player.gridPosition());
 		return;
@@ -411,6 +482,8 @@ void StageScene::handleGoalReached()
 
 	m_gameOver = true;
 	m_cardEffects.clearAllEffects();
+	deactivateFullMapVision();
+	clearDebuffImmunity();
 	m_showClearModal = true;
 	m_treasureSelection = TreasureSelection{};
 	m_treasureHover.reset();
@@ -595,7 +668,27 @@ int32 StageScene::totalActionsTaken() const
 bool StageScene::isCardPlayable(const String& cardId) const
 {
 	const auto& data = getData();
-	return KanjiSystem::hasRequirements(data.kanjiOwned, cardId);
+	const auto& requirements = KanjiSystem::requirementsForCard(cardId);
+	const String shimKanji = U"\u795e"; // 神
+	const String shinKanji = U"\u65b0"; // 新
+
+	for (const auto& kanji : requirements)
+	{
+		if (data.kanjiOwned.contains(kanji))
+		{
+			continue;
+		}
+
+		const bool promotedMatch = (m_promoteShinToKami && (kanji == shimKanji) && data.kanjiOwned.contains(shinKanji));
+		if (promotedMatch)
+		{
+			continue;
+		}
+
+		return false;
+	}
+
+	return true;
 }
 
 Array<String> StageScene::playableCardPool() const

@@ -25,6 +25,15 @@ protected:
 	const StageConfig m_config;
 
 private:
+	friend class CardEffectController;
+
+	void activateYakuEffect();
+	void healActionsToFull();
+	void activateFullMapVision();
+	void deactivateFullMapVision();
+	void activateDebuffImmunity();
+	void clearDebuffImmunity();
+
 	void drawActionCounter() const;
 	void onEndTurn();
 	void modifyActionPoints(int32 delta);
@@ -76,7 +85,12 @@ private:
 	Optional<size_t> m_treasureHover;
 	bool m_showClearModal = false;
 	bool m_resultRecorded = false;
+	int32 m_maxActions = 5;
 	int32 m_actionsRemaining = 5;
+	bool m_promoteShinToKami = false;
+	bool m_fullVisibilityActive = false;
+	Array<Array<bool>> m_fullVisibilityBackup;
+	bool m_ignoreTileDebuffsThisTurn = false;
 	bool m_gameOver = false;
 	Font m_clearCountFont{ 64, Typeface::Bold };
 	Optional<String> m_pendingKanjiReward;

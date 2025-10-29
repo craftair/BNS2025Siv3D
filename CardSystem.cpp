@@ -67,6 +67,13 @@ bool CardSystem::initialize(const FilePathView& libraryPath, const Array<String>
 void CardSystem::update()
 {
 	updateTransform();
+
+	if (m_inputSuppressed)
+	{
+		m_draggingIndex.reset();
+		return;
+	}
+
 	updateCards();
 
 	if (m_endTurnButtonScreen.leftClicked())
@@ -198,6 +205,241 @@ void CardSystem::draw() const
 void CardSystem::resetUsage()
 {
 	resetDeckState();
+}
+
+void CardSystem::setInputSuppressed(bool suppressed)
+{
+	if (m_inputSuppressed == suppressed)
+	{
+		return;
+	}
+
+	m_inputSuppressed = suppressed;
+
+	if (m_inputSuppressed)
+	{
+		m_draggingIndex.reset();
+		m_showDeck = false;
+		m_deckJustOpened = false;
+		m_showTrash = false;
+		m_trashJustOpened = false;
+		m_deckScroll = 0.0;
+		m_trashScroll = 0.0;
+	}
+}
+
+size_t CardSystem::drawCards(size_t count)
+{
+	size_t drawn = 0;
+
+	while ((drawn < count) && count > 0)
+	{
+		const size_t need = count - drawn;
+		drawn += drawFromDeck(need);
+
+		if (drawn >= count)
+		{
+			break;
+		}
+
+		reloadDeckFromTrash();
+		const size_t additional = drawFromDeck(count - drawn);
+		if (additional == 0)
+		{
+			break;
+		}
+		drawn += additional;
+	}
+
+	if (drawn > 0)
+	{
+		layoutHand();
+	}
+
+	return drawn;
+}
+
+bool CardSystem::discardCardInHand(size_t deckIndex)
+{
+	auto& cards = m_deck.cards();
+	if (deckIndex >= cards.size())
+	{
+		return false;
+	}
+
+	auto& card = cards[deckIndex];
+	if (card.inTrash || (not card.inHand))
+	{
+		return false;
+	}
+
+	card.isUsed = true;
+	card.inTrash = true;
+	card.inHand = false;
+	card.isDragging = false;
+	card.dragOffset = Vec2::Zero();
+
+	if (std::find(m_trashOrder.begin(), m_trashOrder.end(), deckIndex) == m_trashOrder.end())
+	{
+		m_trashOrder << deckIndex;
+	}
+
+	removeFromHand(deckIndex);
+	return true;
+}
+
+size_t CardSystem::discardHand()
+{
+	const Array<size_t> handCopy = m_handIndices;
+	size_t discarded = 0;
+
+	for (const size_t index : handCopy)
+	{
+		if (discardCardInHand(index))
+		{
+			++discarded;
+		}
+	}
+
+	return discarded;
+}
+
+void CardSystem::shuffleAllAndDraw(size_t drawCount)
+{
+	auto& cards = m_deck.cards();
+	m_drawPile.clear();
+	m_handIndices.clear();
+	m_trashOrder.clear();
+	m_draggingIndex.reset();
+	m_showDeck = false;
+	m_deckJustOpened = false;
+	m_showTrash = false;
+	m_trashJustOpened = false;
+	m_deckScroll = 0.0;
+	m_trashScroll = 0.0;
+
+	for (size_t index = 0; index < cards.size(); ++index)
+	{
+		auto& card = cards[index];
+		card.isUsed = false;
+		card.inTrash = false;
+		card.inHand = false;
+		card.isDragging = false;
+		card.dragOffset = Vec2::Zero();
+		card.homePosition = Vec2::Zero();
+		card.rect.pos = Vec2::Zero();
+		m_drawPile << index;
+	}
+
+	if (not m_drawPile.isEmpty())
+	{
+		m_drawPile.shuffle();
+	}
+
+	if (drawCount > 0)
+	{
+		drawCards(drawCount);
+	}
+	else
+	{
+		layoutHand();
+	}
+}
+
+bool CardSystem::addDeckCardToHand(size_t deckIndex)
+{
+	auto& cards = m_deck.cards();
+	if (deckIndex >= cards.size())
+	{
+		return false;
+	}
+
+	const auto drawIt = std::find(m_drawPile.begin(), m_drawPile.end(), deckIndex);
+	if (drawIt == m_drawPile.end())
+	{
+		return false;
+	}
+
+	m_drawPile.erase(drawIt);
+
+	auto& card = cards[deckIndex];
+	card.isUsed = false;
+	card.inTrash = false;
+	card.inHand = true;
+	card.isDragging = false;
+	card.dragOffset = Vec2::Zero();
+	card.homePosition = Vec2::Zero();
+	card.rect.pos = Vec2::Zero();
+
+	if (std::find(m_handIndices.begin(), m_handIndices.end(), deckIndex) == m_handIndices.end())
+	{
+		m_handIndices << deckIndex;
+	}
+
+	layoutHand();
+	return true;
+}
+
+Optional<size_t> CardSystem::handCardAtScreenPos(const Vec2& screenPos) const
+{
+	if (m_scale <= 0.0)
+	{
+		return none;
+	}
+
+	const Vec2 cursorVirtual = toVirtual(screenPos);
+	const auto& cards = m_deck.cards();
+
+	Array<size_t> order;
+	order.reserve(m_handIndices.size());
+
+	for (const size_t index : m_handIndices)
+	{
+		if (cards[index].inTrash || (not cards[index].inHand))
+		{
+			continue;
+		}
+
+		if (not cards[index].isDragging)
+		{
+			order << index;
+		}
+	}
+
+	for (const size_t index : m_handIndices)
+	{
+		if (cards[index].inTrash || (not cards[index].inHand))
+		{
+			continue;
+		}
+
+		if (cards[index].isDragging)
+		{
+			order << index;
+		}
+	}
+
+	for (auto it = order.rbegin(); it != order.rend(); ++it)
+	{
+		const auto& card = cards[*it];
+		if (card.rect.contains(cursorVirtual))
+		{
+			return *it;
+		}
+	}
+
+	return none;
+}
+
+const CardInstance* CardSystem::instanceAt(size_t deckIndex) const
+{
+	const auto& cards = m_deck.cards();
+	if (deckIndex >= cards.size())
+	{
+		return nullptr;
+	}
+
+	return &cards[deckIndex];
 }
 
 void CardSystem::loadTextures()

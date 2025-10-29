@@ -22,6 +22,17 @@ public:
 	void setCardPlayCallback(std::function<void(const String& cardId)> callback) { m_cardPlayCallback = callback; }
 	void setEndTurnCallback(std::function<void()> callback) { m_endTurnCallback = callback; }
 	void setCardValidationCallback(std::function<bool(const String& cardId)> callback) { m_cardPlayValidator = callback; }
+	void setInputSuppressed(bool suppressed);
+	bool inputSuppressed() const { return m_inputSuppressed; }
+	size_t drawCards(size_t count);
+	bool discardCardInHand(size_t deckIndex);
+	size_t discardHand();
+	void shuffleAllAndDraw(size_t drawCount);
+	bool addDeckCardToHand(size_t deckIndex);
+	Optional<size_t> handCardAtScreenPos(const Vec2& screenPos) const;
+	const Array<size_t>& handOrder() const { return m_handIndices; }
+	const Array<size_t>& deckOrder() const { return m_drawPile; }
+	const CardInstance* instanceAt(size_t deckIndex) const;
 	Array<String> sampleCardIds(size_t count) const;
 	bool addCardToDeck(const String& cardId);
 	bool removeCardFromDeck(const String& cardId, size_t count = 1);
@@ -79,6 +90,7 @@ private:
 	double m_deckScroll = 0.0;
 	Array<size_t> m_drawPile;
 	Array<size_t> m_handIndices;
+	bool m_inputSuppressed = false;
 	std::function<void(const String& cardId)> m_cardPlayCallback;
 	std::function<void()> m_endTurnCallback;
 	std::function<bool(const String& cardId)> m_cardPlayValidator;
