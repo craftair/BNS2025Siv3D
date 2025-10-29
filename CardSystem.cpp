@@ -890,7 +890,7 @@ void CardSystem::drawScene() const
 	const Transformer2D transformer{ Mat3x2::Scale(m_scale).translated(m_offset) };
 
 	RectF{ 0, 0, m_virtualSize.x, m_activationLine }.draw(ColorF{ 0.15, 0.18, 0.3, 0.15 });
-	Line{ 0, m_activationLine, m_virtualSize.x, m_activationLine }.draw(6, ColorF{ 0.85, 0.3, 0.3, 0.9 });
+	//Line{ 0, m_activationLine, m_virtualSize.x, m_activationLine }.draw(6, ColorF{ 0.85, 0.3, 0.3, 0.9 });
 
 	const auto& cards = m_deck.cards();
 	Array<size_t> order;
@@ -977,13 +977,13 @@ void CardSystem::drawUI() const
 	const RectF deckButtonRect = m_deckButtonScreen;
 	deckButtonRect.rounded(12).draw(deckButtonColor);
 	deckButtonRect.rounded(12).drawFrame(2, 0, frameColor);
-	m_bodyFont(Format(U"Deck (", m_drawPile.size(), U")")).drawAt(deckButtonRect.center(), ColorF{ 0.95 });
+	m_bodyFont(Format(U"山札 (", m_drawPile.size(), U")")).drawAt(deckButtonRect.center(), ColorF{ 0.95 });
 
 	const ColorF trashButtonColor = m_showTrash ? ColorF{ 0.35, 0.25, 0.45, 0.9 } : ColorF{ 0.25, 0.22, 0.32, 0.85 };
 	const RectF trashButtonRect = m_trashButtonScreen;
 	trashButtonRect.rounded(12).draw(trashButtonColor);
 	trashButtonRect.rounded(12).drawFrame(2, 0, frameColor);
-	m_bodyFont(Format(U"Trash (", m_trashOrder.size(), U")")).drawAt(trashButtonRect.center(), ColorF{ 0.95 });
+	m_bodyFont(Format(U"墓地 (", m_trashOrder.size(), U")")).drawAt(trashButtonRect.center(), ColorF{ 0.95 });
 
 	if (m_showDeck)
 	{
@@ -992,7 +992,7 @@ void CardSystem::drawUI() const
 		const RectF modal = m_deckModalRect;
 		modal.rounded(18).draw(ColorF{ 0.08, 0.1, 0.1, 0.96 });
 		modal.rounded(18).drawFrame(3, 0, ColorF{ 0.4, 0.55, 0.55, 0.9 });
-		m_bodyFont(U"Deck").draw(modal.pos.movedBy(28, 22), ColorF{ 0.95 });
+		m_bodyFont(U"山札").draw(modal.pos.movedBy(28, 22), ColorF{ 0.95 });
 
 		const RectF closeButton = m_deckCloseButton;
 		closeButton.rounded(10).draw(ColorF{ 0.3, 0.32, 0.3, 0.9 });
@@ -1061,7 +1061,7 @@ void CardSystem::drawUI() const
 
 		if (deckOrder.isEmpty())
 		{
-			m_bodyFont(U"Deck is empty!").drawAt(clipRect.center(), ColorF{ 0.8 });
+			m_bodyFont(U"山札は空").drawAt(clipRect.center(), ColorF{ 0.8 });
 		}
 	}
 	else if (m_showTrash)
@@ -1071,7 +1071,7 @@ void CardSystem::drawUI() const
 		const RectF modal = m_trashModalRect;
 		modal.rounded(18).draw(ColorF{ 0.08, 0.09, 0.12, 0.96 });
 		modal.rounded(18).drawFrame(3, 0, ColorF{ 0.4, 0.45, 0.6, 0.9 });
-		m_bodyFont(U"Trash").draw(modal.pos.movedBy(28, 22), ColorF{ 0.95 });
+		m_bodyFont(U"墓地").draw(modal.pos.movedBy(28, 22), ColorF{ 0.95 });
 
 		const RectF closeButton = m_trashCloseButton;
 		closeButton.rounded(10).draw(ColorF{ 0.3, 0.25, 0.35, 0.9 });
@@ -1138,7 +1138,7 @@ void CardSystem::drawUI() const
 		if (m_trashOrder.empty())
 		{
 			const Vec2 emptyMessagePos = clipRect.center();
-			m_bodyFont(U"Trash is empty!!!!").drawAt(emptyMessagePos, ColorF{ 0.8 });
+			m_bodyFont(U"墓地は空").drawAt(emptyMessagePos, ColorF{ 0.8 });
 		}
 	}
 }

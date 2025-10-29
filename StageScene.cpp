@@ -448,13 +448,13 @@ void StageScene::drawTreasureSelection() const
 
 		rect.stretched(4).drawFrame(4, 0, borderColor);
 
-		if (FontAsset::IsRegistered(U"MisakiFont"))
-		{
-			if (const CardDefinition* def = m_cardSystem.findCardDefinition(m_treasureSelection.cardIds[i]))
-			{
-				FontAsset(U"MisakiFont")(def->name).drawAt(rect.center().movedBy(0, rect.h * 0.58), ColorF{ 0.95 });
-			}
-		}
+		//if (FontAsset::IsRegistered(U"MisakiFont"))
+		//{
+		//	if (const CardDefinition* def = m_cardSystem.findCardDefinition(m_treasureSelection.cardIds[i]))
+		//	{
+		//		FontAsset(U"MisakiFont")(def->name).drawAt(rect.center().movedBy(0, rect.h * 0.58), ColorF{ 0.95 });
+		//	}
+		//}
 	}
 }
 
@@ -629,7 +629,7 @@ void StageScene::drawClearModal() const
 
 	if (m_pendingKanjiReward)
 	{
-		const Vec2 messagePos{ layout.modal.pos.x + 34, layout.nextButton.y - 76 };
+		const Vec2 messagePos{ layout.modal.pos.x + 34, layout.nextButton.y + 100 };
 		const Vec2 detailPos = messagePos.movedBy(0, 36);
 
 		const String message = U"新しいシン「{}」を獲得しました！"_fmt(*m_pendingKanjiReward);

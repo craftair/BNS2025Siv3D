@@ -19,7 +19,7 @@ void Ending::draw() const
 	full.draw(Arg::top = ColorF{ 0.12, 0.14, 0.2 }, Arg::bottom = ColorF{ 0.02, 0.03, 0.05 });
 
 	const Vec2 headingCenter{ Scene::CenterF().x, Scene::Height() * 0.22 };
-	m_titleFont(U"お疲れさまでした！").drawAt(headingCenter, ColorF{ 0.96 });
+	m_titleFont(U"終わり(仮)").drawAt(headingCenter, ColorF{ 0.96 });
 	//m_bodyFont(U"あなたの冒険はここで完結です").drawAt(headingCenter.movedBy(0, 56), ColorF{ 0.88 });
 
 	const Vec2 focusCenter = Scene::CenterF().movedBy(0, 24);
