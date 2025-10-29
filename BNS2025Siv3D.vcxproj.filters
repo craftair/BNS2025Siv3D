@@ -171,6 +171,12 @@
     <ClCompile Include="Stage5.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="StageScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="KanjiSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Title.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -894,6 +900,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Ending.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StageScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="KanjiSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

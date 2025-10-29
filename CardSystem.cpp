@@ -28,6 +28,7 @@ bool CardSystem::initialize(const FilePathView& libraryPath, const Array<String>
 	m_trashJustOpened = false;
 	m_cardPlayCallback = nullptr;
 	m_endTurnCallback = nullptr;
+	m_cardPlayValidator = nullptr;
 
 	if (not m_library.loadFromJSON(libraryPath))
 	{
@@ -593,27 +594,43 @@ void CardSystem::updateDragging(const Vec2& cursorVirtual)
 
 			if (used)
 			{
-				if (not card.inTrash)
+				bool allowPlay = true;
+				if (card.definition && m_cardPlayValidator)
 				{
-					card.isUsed = true;
-					card.inTrash = true;
-					card.inHand = false;
-					removeFromHand(*m_draggingIndex);
-					m_trashOrder << *m_draggingIndex;
+					allowPlay = m_cardPlayValidator(card.definition->id);
 				}
 
-				if (card.definition)
+				if (allowPlay)
 				{
-					m_playLog.push_front(Format(card.definition->name, U" (", card.definition->id, U"#", card.instanceId, U")"));
-					if (m_playLog.size() > 6)
+					if (not card.inTrash)
 					{
-						m_playLog.pop_back();
+						card.isUsed = true;
+						card.inTrash = true;
+						card.inHand = false;
+						removeFromHand(*m_draggingIndex);
+						m_trashOrder << *m_draggingIndex;
 					}
 
-					if (m_cardPlayCallback)
+					if (card.definition)
 					{
-						m_cardPlayCallback(card.definition->id);
+						m_playLog.push_front(Format(card.definition->name, U" (", card.definition->id, U"#", card.instanceId, U")"));
+						if (m_playLog.size() > 6)
+						{
+							m_playLog.pop_back();
+						}
+
+						if (m_cardPlayCallback)
+						{
+							m_cardPlayCallback(card.definition->id);
+						}
 					}
+				}
+				else
+				{
+					card.rect.pos = card.homePosition;
+					card.isUsed = false;
+					card.inTrash = false;
+					card.inHand = true;
 				}
 			}
 			else
@@ -938,6 +955,79 @@ bool CardSystem::addCardToDeck(const String& cardId)
 	return true;
 }
 
+bool CardSystem::removeCardFromDeck(const String& cardId, size_t count)
+{
+	bool removedAny = false;
+
+	for (size_t n = 0; n < count; ++n)
+	{
+		auto& cards = m_deck.cards();
+		bool removedThisIteration = false;
+
+		for (size_t index = 0; index < cards.size(); ++index)
+		{
+			const auto* def = cards[index].definition;
+			if (not def || (def->id != cardId))
+			{
+				continue;
+			}
+
+			auto adjustIndices = [&](Array<size_t>& container)
+			{
+				Array<size_t> updated;
+				updated.reserve(container.size());
+				for (const size_t value : container)
+				{
+					if (value == index)
+					{
+						continue;
+					}
+
+					if (value > index)
+					{
+						updated << (value - 1);
+					}
+					else
+					{
+						updated << value;
+					}
+				}
+				container = std::move(updated);
+			};
+
+			adjustIndices(m_drawPile);
+			adjustIndices(m_handIndices);
+			adjustIndices(m_trashOrder);
+
+			if (m_draggingIndex)
+			{
+				if (*m_draggingIndex == index)
+				{
+					m_draggingIndex.reset();
+				}
+				else if (*m_draggingIndex > index)
+				{
+					--(*m_draggingIndex);
+				}
+			}
+
+			cards.erase(cards.begin() + index);
+			layoutHand();
+
+			removedAny = true;
+			removedThisIteration = true;
+			break;
+		}
+
+		if (not removedThisIteration)
+		{
+			break;
+		}
+	}
+
+	return removedAny;
+}
+
 const Texture* CardSystem::textureForCard(const String& cardId) const
 {
 	if (const auto it = m_textures.find(cardId); it != m_textures.end())
@@ -950,6 +1040,17 @@ const Texture* CardSystem::textureForCard(const String& cardId) const
 const CardDefinition* CardSystem::findCardDefinition(const String& cardId) const
 {
 	return m_library.findDefinition(cardId);
+}
+
+Array<String> CardSystem::allCardIds() const
+{
+	Array<String> result;
+	result.reserve(m_library.definitions().size());
+	for (const auto& def : m_library.definitions())
+	{
+		result << def.id;
+	}
+	return result;
 }
 
 Vec2 CardSystem::toVirtual(const Vec2& screenPos) const

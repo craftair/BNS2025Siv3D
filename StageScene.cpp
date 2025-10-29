@@ -1,5 +1,6 @@
 ﻿#include "StageScene.h"
 #include <utility>
+#include <algorithm>
 
 StageScene::StageScene(const InitData& init, StageConfig config)
 	: IScene{ init }
@@ -37,12 +38,19 @@ StageScene::StageScene(const InitData& init, StageConfig config)
 		throw Error{ U"Failed card system" };
 	}
 
+	m_cardSystem.setCardValidationCallback([this](const String& cardId)
+	{
+		return isCardPlayable(cardId);
+	});
+
 	m_actionsUsed = 0;
 	m_showClearModal = false;
 	m_resultRecorded = false;
 	m_treasureSelection = TreasureSelection{};
 	m_treasureHover.reset();
 	m_cardEffects.initialize(&m_mapSystem, &m_player);
+	m_pendingKanjiReward.reset();
+	m_pendingRewardCards.clear();
 
 	m_cardSystem.setCardPlayCallback([this](const String& cardId)
 	{
@@ -55,6 +63,25 @@ StageScene::StageScene(const InitData& init, StageConfig config)
 	{
 		onEndTurn();
 	});
+
+	auto& data = getData();
+	for (const auto& info : KanjiSystem::allKanji())
+	{
+		if ((info.id == U"進") || (info.id == U"神") || (not data.kanjiOwned.contains(info.id)))
+		{
+			continue;
+		}
+
+		for (const auto& cardId : info.cardIds)
+		{
+			data.unlockedCards.insert(cardId);
+		}
+	}
+
+	for (const auto& cardId : data.unlockedCards)
+	{
+		m_cardSystem.addCardToDeck(cardId);
+	}
 
 	m_previousPlayerGrid = m_player.gridPosition();
 }
@@ -120,6 +147,7 @@ void StageScene::draw() const
 	drawActionCounter();
 	m_player.draw(m_mapSystem);
 	m_cardSystem.draw();
+	drawKanjiPanel();
 	drawTreasureSelection();
 	drawClearModal();
 }
@@ -230,12 +258,20 @@ void StageScene::handleTileInteractions(const Point& previous, const Point& curr
 
 void StageScene::beginTreasureSelection(const Point& location)
 {
-	Array<String> options = m_cardSystem.sampleCardIds(3);
-	if (options.isEmpty())
+	Array<String> pool = playableCardPool();
+	if (pool.isEmpty())
 	{
 		m_mapSystem.removeObjectAt(location);
 		return;
 	}
+
+	pool.shuffle();
+	if (pool.size() > 3)
+	{
+		pool.resize(3);
+	}
+
+	Array<String> options = pool;
 
 	m_treasureSelection.active = true;
 	m_treasureSelection.location = location;
@@ -378,6 +414,7 @@ void StageScene::handleGoalReached()
 	m_showClearModal = true;
 	m_treasureSelection = TreasureSelection{};
 	m_treasureHover.reset();
+	prepareKanjiReward();
 
 	if (not m_resultRecorded)
 	{
@@ -453,8 +490,8 @@ void StageScene::drawClearModal() const
 	layout.modal.rounded(18).draw(ColorF{ 0.1, 0.12, 0.18, 0.96 });
 	layout.modal.rounded(18).drawFrame(3, 0, ColorF{ 0.52, 0.62, 0.95, 0.85 });
 
-	Vec2 titlePos = layout.modal.pos.movedBy(34, 32);
-	String clearText = U"ステージ{} クリア！"_fmt(m_config.stageIndex);
+	const Vec2 titlePos = layout.modal.pos.movedBy(34, 32);
+	const String clearText = U"ステージ{} クリア！"_fmt(m_config.stageIndex);
 	if (FontAsset::IsRegistered(U"MisakiFont"))
 	{
 		FontAsset(U"MisakiFont")(clearText).draw(titlePos, ColorF{ 0.95 });
@@ -516,10 +553,206 @@ void StageScene::drawClearModal() const
 	{
 		drawButton(layout.nextButton, U"ステージ終了", true, false);
 	}
+
+	if (m_pendingKanjiReward)
+	{
+		const Vec2 messagePos{ layout.modal.pos.x + 34, layout.nextButton.y - 76 };
+		const Vec2 detailPos = messagePos.movedBy(0, 36);
+
+		const String message = U"新しいシン「{}」を獲得しました！"_fmt(*m_pendingKanjiReward);
+		const ColorF messageColor{ 0.98, 0.91, 0.45 };
+		const ColorF detailColor{ 0.9 };
+
+		if (FontAsset::IsRegistered(U"MisakiFont"))
+		{
+			FontAsset(U"MisakiFont")(message).draw(messagePos, messageColor);
+
+			if (not m_pendingRewardCards.isEmpty())
+			{
+				String cardsLine = U"対応カード: ";
+				for (size_t i = 0; i < m_pendingRewardCards.size(); ++i)
+				{
+					if (i > 0)
+					{
+						cardsLine += U" / ";
+					}
+					cardsLine += m_pendingRewardCards[i];
+				}
+				FontAsset(U"MisakiFont")(cardsLine).draw(detailPos, detailColor);
+			}
+		}
+		else
+		{
+			m_clearCountFont(message).draw(messagePos, messageColor);
+		}
+	}
 }
 
 int32 StageScene::totalActionsTaken() const
 {
 	return getData().totalActions;
+}
+bool StageScene::isCardPlayable(const String& cardId) const
+{
+	const auto& data = getData();
+	return KanjiSystem::hasRequirements(data.kanjiOwned, cardId);
+}
+
+Array<String> StageScene::playableCardPool() const
+{
+	Array<String> pool;
+	HashSet<String> seen;
+	for (const auto& cardId : m_cardSystem.allCardIds())
+	{
+		if (seen.contains(cardId))
+		{
+			continue;
+		}
+
+		if (isCardPlayable(cardId))
+		{
+			pool << cardId;
+			seen.insert(cardId);
+		}
+	}
+
+	return pool;
+}
+
+void StageScene::prepareKanjiReward()
+{
+	m_pendingKanjiReward.reset();
+	m_pendingRewardCards.clear();
+
+	if (not shouldGrantKanjiReward())
+	{
+		return;
+	}
+
+	auto& data = getData();
+	if (data.kanjiRewardStagesClaimed.contains(m_config.stageIndex))
+	{
+		return;
+	}
+
+	Array<String> candidates;
+	for (const auto& info : KanjiSystem::allKanji())
+	{
+		if ((info.id == U"神") || data.kanjiOwned.contains(info.id))
+		{
+			continue;
+		}
+
+		candidates << info.id;
+	}
+
+	if (candidates.isEmpty())
+	{
+		return;
+	}
+
+	const size_t index = static_cast<size_t>(Random<int32>(0, static_cast<int32>(candidates.size() - 1)));
+	const String reward = candidates[index];
+	data.kanjiOwned.insert(reward);
+	data.kanjiRewardStagesClaimed.insert(m_config.stageIndex);
+	m_pendingKanjiReward = reward;
+
+	if (const KanjiInfo* info = KanjiSystem::findKanji(reward))
+	{
+		m_pendingRewardCards = info->cardIds;
+		unlockCardsForKanji(*info);
+	}
+
+}
+
+bool StageScene::shouldGrantKanjiReward() const
+{
+	return (m_config.stageIndex == 1) || (m_config.stageIndex == 3);
+}
+
+void StageScene::unlockCardsForKanji(const KanjiInfo& info)
+{
+	auto& data = getData();
+
+	if (info.id == U"神")
+	{
+		auto removeAllCopies = [&](const String& cardId)
+		{
+			data.unlockedCards.erase(cardId);
+			while (m_cardSystem.removeCardFromDeck(cardId))
+			{
+			}
+		};
+
+		removeAllCopies(U"dou");
+		removeAllCopies(U"pin");
+		removeAllCopies(U"yaku");
+
+		auto ensureCard = [&](const String& cardId)
+		{
+			if (data.unlockedCards.insert(cardId).second)
+			{
+				m_cardSystem.addCardToDeck(cardId);
+			}
+		};
+
+		ensureCard(U"dou2");
+		ensureCard(U"pin2");
+		ensureCard(U"soku");
+		return;
+	}
+
+	for (const auto& cardId : info.cardIds)
+	{
+		const auto result = data.unlockedCards.insert(cardId);
+		if (result.second)
+		{
+			m_cardSystem.addCardToDeck(cardId);
+		}
+	}
+}
+
+void StageScene::drawKanjiPanel() const
+{
+	const auto& data = getData();
+	if (data.kanjiOwned.empty())
+	{
+		return;
+	}
+
+	Array<String> kanjiList;
+	kanjiList.reserve(data.kanjiOwned.size());
+	for (const auto& kanji : data.kanjiOwned)
+	{
+		kanjiList << kanji;
+	}
+
+	std::sort(kanjiList.begin(), kanjiList.end());
+
+	String text = U"所持シン: ";
+	for (size_t i = 0; i < kanjiList.size(); ++i)
+	{
+		if (i > 0)
+		{
+			text += U" ";
+		}
+		text += kanjiList[i];
+	}
+
+	const Vec2 panelSize{ 240, 64 };
+	const Vec2 panelPos{ Scene::Width() - panelSize.x - 20, 20 };
+	RectF panel{ panelPos, panelSize };
+	panel.rounded(14).draw(ColorF{ 0.1, 0.12, 0.18, 0.85 });
+	panel.rounded(14).drawFrame(2, 0, ColorF{ 0.45, 0.55, 0.95, 0.35 });
+
+	const Vec2 textPos = panelPos + Vec2{ 18, 22 };
+	if (FontAsset::IsRegistered(U"MisakiFont"))
+	{
+		FontAsset(U"MisakiFont")(text).draw(textPos, ColorF{ 0.96 });
+	}
+	else
+	{
+		m_clearCountFont(text).draw(textPos, ColorF{ 0.96 });
+	}
 }
 

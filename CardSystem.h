@@ -21,10 +21,13 @@ public:
 	const Array<String>& playLog() const { return m_playLog; }
 	void setCardPlayCallback(std::function<void(const String& cardId)> callback) { m_cardPlayCallback = callback; }
 	void setEndTurnCallback(std::function<void()> callback) { m_endTurnCallback = callback; }
+	void setCardValidationCallback(std::function<bool(const String& cardId)> callback) { m_cardPlayValidator = callback; }
 	Array<String> sampleCardIds(size_t count) const;
 	bool addCardToDeck(const String& cardId);
+	bool removeCardFromDeck(const String& cardId, size_t count = 1);
 	const Texture* textureForCard(const String& cardId) const;
 	const CardDefinition* findCardDefinition(const String& cardId) const;
+	Array<String> allCardIds() const;
 
 private:
 	void loadTextures();
@@ -78,4 +81,5 @@ private:
 	Array<size_t> m_handIndices;
 	std::function<void(const String& cardId)> m_cardPlayCallback;
 	std::function<void()> m_endTurnCallback;
+	std::function<bool(const String& cardId)> m_cardPlayValidator;
 };

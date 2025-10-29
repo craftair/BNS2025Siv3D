@@ -1,10 +1,11 @@
-#pragma once
+﻿#pragma once
 #include "Common.h"
 #include "CardSystem.h"
 #include "MapSystem.h"
 #include "Player.h"
 #include "CardEffectController.h"
 #include "MapObjectTypes.h"
+#include "KanjiSystem.h"
 
 struct StageConfig
 {
@@ -37,7 +38,13 @@ private:
 	void handleGoalReached();
 	void handleClearModalInput();
 	void drawClearModal() const;
+	void drawKanjiPanel() const;
 	int32 totalActionsTaken() const;
+	bool isCardPlayable(const String& cardId) const;
+	Array<String> playableCardPool() const;
+	void prepareKanjiReward();
+	bool shouldGrantKanjiReward() const;
+	void unlockCardsForKanji(const KanjiInfo& info);
 
 	struct ClearModalLayout
 	{
@@ -72,5 +79,7 @@ private:
 	int32 m_actionsRemaining = 5;
 	bool m_gameOver = false;
 	Font m_clearCountFont{ 64, Typeface::Bold };
+	Optional<String> m_pendingKanjiReward;
+	Array<String> m_pendingRewardCards;
 };
 

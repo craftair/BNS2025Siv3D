@@ -119,6 +119,12 @@
       "name": "nyuu",
       "size": [160, 220],
       "image": "resources/texture/cards/card_nyuu.png"
+    },
+    {
+      "id": "kou3",
+      "name": "kou3",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_kou3.png"
     }
   ]
 }
