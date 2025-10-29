@@ -44,7 +44,7 @@ void Settings(GameData& data, App& manager, Array<Texture> textures)
 
 void Main()
 {
-	Window::Resize(1920, 1080);
+	Window::Resize(1280, 720);
 
 	FontAsset::Register(U"MisakiFont", FontMethod::MSDF, 16, U"resources/font/misaki/misaki_gothic.ttf");
 
