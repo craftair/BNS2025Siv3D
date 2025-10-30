@@ -95,5 +95,5 @@ private:
 	Font m_clearCountFont{ 64, Typeface::Bold };
 	Optional<String> m_pendingKanjiReward;
 	Array<String> m_pendingRewardCards;
+	Texture m_backgroundTexture;
 };
-

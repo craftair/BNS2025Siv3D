@@ -10,6 +10,7 @@ namespace
 	const Vec2 TrashCardSpacing{ 26, 20 };
 	constexpr size_t DeckCopiesPerCard = 2;
 	constexpr size_t InitialHandSize = 4;
+	constexpr double OverlayMargin = 96.0;
 }
 
 bool CardSystem::initialize(const FilePathView& libraryPath, const Array<String>& deckIds, const CardHandConfig& config)
@@ -36,6 +37,10 @@ bool CardSystem::initialize(const FilePathView& libraryPath, const Array<String>
 	}
 
 	loadTextures();
+
+	m_deckButtonTexture = Texture{ U"resources/texture/button/deck.png" };
+	m_trashButtonTexture = Texture{ U"resources/texture/button/trash.png" };
+	m_endTurnTexture = Texture{ U"resources/texture/button/turnend.png" };
 
 	Array<const CardDefinition*> deckDefinitions;
 	for (const auto& id : deckIds)
@@ -89,7 +94,25 @@ void CardSystem::update()
 		{
 			m_showTrash = false;
 			m_trashScroll = 0.0;
+			m_trashScrollMax = 0.0;
+			m_trashScrollbarDragging = false;
+			m_trashScrollbarGrabOffset = 0.0;
+			m_trashContentRect = RectF{ 0, 0, 0, 0 };
+			m_trashScrollbarTrack = RectF{ 0, 0, 0, 0 };
+			m_trashScrollbarThumb = RectF{ 0, 0, 0, 0 };
+			m_trashScrollUpButton = RectF{ 0, 0, 0, 0 };
+			m_trashScrollDownButton = RectF{ 0, 0, 0, 0 };
 		}
+
+		m_deckScroll = 0.0;
+		m_deckScrollMax = 0.0;
+		m_deckScrollbarDragging = false;
+		m_deckScrollbarGrabOffset = 0.0;
+		m_deckContentRect = RectF{ 0, 0, 0, 0 };
+		m_deckScrollbarTrack = RectF{ 0, 0, 0, 0 };
+		m_deckScrollbarThumb = RectF{ 0, 0, 0, 0 };
+		m_deckScrollUpButton = RectF{ 0, 0, 0, 0 };
+		m_deckScrollDownButton = RectF{ 0, 0, 0, 0 };
 	}
 
 	if (m_trashButtonScreen.leftClicked())
@@ -100,97 +123,252 @@ void CardSystem::update()
 		{
 			m_showDeck = false;
 			m_deckScroll = 0.0;
+			m_deckScrollMax = 0.0;
+			m_deckScrollbarDragging = false;
+			m_deckScrollbarGrabOffset = 0.0;
+			m_deckContentRect = RectF{ 0, 0, 0, 0 };
+			m_deckScrollbarTrack = RectF{ 0, 0, 0, 0 };
+			m_deckScrollbarThumb = RectF{ 0, 0, 0, 0 };
+			m_deckScrollUpButton = RectF{ 0, 0, 0, 0 };
+			m_deckScrollDownButton = RectF{ 0, 0, 0, 0 };
 		}
+
+		m_trashScroll = 0.0;
+		m_trashScrollMax = 0.0;
+		m_trashScrollbarDragging = false;
+		m_trashScrollbarGrabOffset = 0.0;
+		m_trashContentRect = RectF{ 0, 0, 0, 0 };
+		m_trashScrollbarTrack = RectF{ 0, 0, 0, 0 };
+		m_trashScrollbarThumb = RectF{ 0, 0, 0, 0 };
+		m_trashScrollUpButton = RectF{ 0, 0, 0, 0 };
+		m_trashScrollDownButton = RectF{ 0, 0, 0, 0 };
 	}
 
 	if (m_showDeck)
 	{
+		const RectF contentRect{
+			OverlayMargin,
+			OverlayMargin,
+			Max(0.0, Scene::Width() - OverlayMargin * 2.0),
+			Max(0.0, Scene::Height() - OverlayMargin * 2.0)
+		};
+		m_deckContentRect = contentRect;
+
+		const auto& cards = m_deck.cards();
+		Array<size_t> deckOrder = m_drawPile;
+		std::reverse(deckOrder.begin(), deckOrder.end());
+
 		const Vec2 cardSize = TrashCardSize;
 		const Vec2 spacing = TrashCardSpacing;
-		const double contentWidth = m_deckModalSize.x - (TrashPaddingLeft + TrashPaddingRight);
 		const double unitWidth = cardSize.x + spacing.x;
-		const int32 columns = Max<int32>(1, static_cast<int32>((contentWidth + spacing.x) / unitWidth));
-		const int32 totalCards = static_cast<int32>(m_drawPile.size());
-		const int32 rows = (totalCards + columns - 1) / columns;
+		const int32 maxFitColumns = (unitWidth > 0.0)
+			? static_cast<int32>((contentRect.w + spacing.x) / unitWidth)
+			: 1;
+		const int32 columns = Max<int32>(1, Min<int32>(4, maxFitColumns));
+		const int32 totalCards = static_cast<int32>(deckOrder.size());
+		const int32 rows = (columns > 0) ? (totalCards + columns - 1) / columns : 0;
 		const double contentHeight = (rows > 0) ? rows * (cardSize.y + spacing.y) - spacing.y : 0.0;
-		const double viewHeight = m_deckModalSize.y - (TrashPaddingTop + TrashPaddingBottom);
+		m_deckScrollMax = Max(0.0, contentHeight - contentRect.h);
 
-		if (contentHeight > viewHeight)
+		const Vec2 cursor = Cursor::PosF();
+		if (contentRect.contains(cursor) && (m_deckScrollMax > 0.0))
 		{
-			m_deckScroll -= Mouse::Wheel() * 32.0;
-			m_deckScroll = Clamp(m_deckScroll, 0.0, Max(0.0, contentHeight - viewHeight));
+			const double wheel = Mouse::Wheel();
+			if (wheel != 0.0)
+			{
+				const double step = (cardSize.y + spacing.y) * 0.35;
+				m_deckScroll = Clamp(m_deckScroll + wheel * step, 0.0, m_deckScrollMax);
+			}
 		}
-		else
+		m_deckScroll = Clamp(m_deckScroll, 0.0, m_deckScrollMax);
+
+		bool cursorOnCard = false;
+		if (contentRect.contains(cursor))
 		{
-			m_deckScroll = 0.0;
+			int32 index = 0;
+			for (const size_t deckIndex : deckOrder)
+			{
+				if (deckIndex >= cards.size())
+				{
+					++index;
+					continue;
+				}
+
+				const auto& card = cards[deckIndex];
+				if (not card.definition)
+				{
+					++index;
+					continue;
+				}
+
+				const int32 row = index / columns;
+				const int32 col = index % columns;
+				const Vec2 pos{
+					contentRect.x + col * unitWidth,
+					contentRect.y + row * (cardSize.y + spacing.y) - m_deckScroll
+				};
+
+				RectF cardRect{ pos, cardSize };
+				const double cardBottom = cardRect.y + cardRect.h;
+				if ((cardBottom < contentRect.y) || (cardRect.y > contentRect.y + contentRect.h))
+				{
+					++index;
+					continue;
+				}
+
+				if (cardRect.contains(cursor))
+				{
+					cursorOnCard = true;
+					break;
+				}
+
+				++index;
+			}
 		}
 
 		if (not m_deckJustOpened)
 		{
-			if (m_deckCloseButton.leftClicked())
+			if (MouseL.down() && (not cursorOnCard))
 			{
 				m_showDeck = false;
 			}
-			else if (MouseL.down() && (not m_deckModalRect.contains(Cursor::PosF())) && (not m_deckButtonScreen.contains(Cursor::PosF())))
-			{
-				m_showDeck = false;
-			}
-
-			if (KeyEscape.down())
+			else if (KeyEscape.down())
 			{
 				m_showDeck = false;
 			}
 		}
+
+		m_deckScrollUpButton = RectF{ 0, 0, 0, 0 };
+		m_deckScrollDownButton = RectF{ 0, 0, 0, 0 };
+		m_deckScrollbarTrack = RectF{ 0, 0, 0, 0 };
+		m_deckScrollbarThumb = RectF{ 0, 0, 0, 0 };
+		m_deckScrollbarDragging = false;
+		m_deckScrollbarGrabOffset = 0.0;
 	}
 	else
 	{
 		m_deckScroll = 0.0;
+		m_deckScrollMax = 0.0;
+		m_deckContentRect = RectF{ 0, 0, 0, 0 };
+		m_deckScrollUpButton = RectF{ 0, 0, 0, 0 };
+		m_deckScrollDownButton = RectF{ 0, 0, 0, 0 };
+		m_deckScrollbarTrack = RectF{ 0, 0, 0, 0 };
+		m_deckScrollbarThumb = RectF{ 0, 0, 0, 0 };
+		m_deckScrollbarDragging = false;
+		m_deckScrollbarGrabOffset = 0.0;
 	}
 
 	m_deckJustOpened = false;
 
 	if (m_showTrash)
 	{
+		const RectF contentRect{
+			OverlayMargin,
+			OverlayMargin,
+			Max(0.0, Scene::Width() - OverlayMargin * 2.0),
+			Max(0.0, Scene::Height() - OverlayMargin * 2.0)
+		};
+		m_trashContentRect = contentRect;
+
+		const auto& cards = m_deck.cards();
 		const Vec2 cardSize = TrashCardSize;
 		const Vec2 spacing = TrashCardSpacing;
-		const double contentWidth = m_trashModalSize.x - (TrashPaddingLeft + TrashPaddingRight);
 		const double unitWidth = cardSize.x + spacing.x;
-		const int32 columns = Max<int32>(1, static_cast<int32>((contentWidth + spacing.x) / unitWidth));
+		const int32 maxFitColumns = (unitWidth > 0.0)
+			? static_cast<int32>((contentRect.w + spacing.x) / unitWidth)
+			: 1;
+		const int32 columns = Max<int32>(1, Min<int32>(4, maxFitColumns));
 		const int32 totalCards = static_cast<int32>(m_trashOrder.size());
-		const int32 rows = (totalCards + columns - 1) / columns;
+		const int32 rows = (columns > 0) ? (totalCards + columns - 1) / columns : 0;
 		const double contentHeight = (rows > 0) ? rows * (cardSize.y + spacing.y) - spacing.y : 0.0;
-		const double viewHeight = m_trashModalSize.y - (TrashPaddingTop + TrashPaddingBottom);
+		m_trashScrollMax = Max(0.0, contentHeight - contentRect.h);
 
-		if (contentHeight > viewHeight)
+		const Vec2 cursor = Cursor::PosF();
+		if (contentRect.contains(cursor) && (m_trashScrollMax > 0.0))
 		{
-			m_trashScroll -= Mouse::Wheel() * 32.0;
-			m_trashScroll = Clamp(m_trashScroll, 0.0, Max(0.0, contentHeight - viewHeight));
+			const double wheel = Mouse::Wheel();
+			if (wheel != 0.0)
+			{
+				const double step = (cardSize.y + spacing.y) * 0.35;
+				m_trashScroll = Clamp(m_trashScroll + wheel * step, 0.0, m_trashScrollMax);
+			}
 		}
-		else
+		m_trashScroll = Clamp(m_trashScroll, 0.0, m_trashScrollMax);
+
+		bool cursorOnCard = false;
+		if (contentRect.contains(cursor))
 		{
-			m_trashScroll = 0.0;
+			int32 index = 0;
+			for (const size_t deckIndex : m_trashOrder)
+			{
+				if (deckIndex >= cards.size())
+				{
+					++index;
+					continue;
+				}
+
+				const auto& card = cards[deckIndex];
+				if (not card.definition)
+				{
+					++index;
+					continue;
+				}
+
+				const int32 row = index / columns;
+				const int32 col = index % columns;
+				const Vec2 pos{
+					contentRect.x + col * unitWidth,
+					contentRect.y + row * (cardSize.y + spacing.y) - m_trashScroll
+				};
+
+				RectF cardRect{ pos, cardSize };
+				const double cardBottom = cardRect.y + cardRect.h;
+				if ((cardBottom < contentRect.y) || (cardRect.y > contentRect.y + contentRect.h))
+				{
+					++index;
+					continue;
+				}
+
+				if (cardRect.contains(cursor))
+				{
+					cursorOnCard = true;
+					break;
+				}
+
+				++index;
+			}
 		}
 
 		if (not m_trashJustOpened)
 		{
-			if (m_trashCloseButton.leftClicked())
+			if (MouseL.down() && (not cursorOnCard))
 			{
 				m_showTrash = false;
 			}
-			else if (MouseL.down() && (not m_trashModalRect.contains(Cursor::PosF())) && (not m_trashButtonScreen.contains(Cursor::PosF())))
-			{
-				m_showTrash = false;
-			}
-
-			if (KeyEscape.down())
+			else if (KeyEscape.down())
 			{
 				m_showTrash = false;
 			}
 		}
+
+		m_trashScrollUpButton = RectF{ 0, 0, 0, 0 };
+		m_trashScrollDownButton = RectF{ 0, 0, 0, 0 };
+		m_trashScrollbarTrack = RectF{ 0, 0, 0, 0 };
+		m_trashScrollbarThumb = RectF{ 0, 0, 0, 0 };
+		m_trashScrollbarDragging = false;
+		m_trashScrollbarGrabOffset = 0.0;
 	}
 	else
 	{
 		m_trashScroll = 0.0;
+		m_trashScrollMax = 0.0;
+		m_trashContentRect = RectF{ 0, 0, 0, 0 };
+		m_trashScrollUpButton = RectF{ 0, 0, 0, 0 };
+		m_trashScrollDownButton = RectF{ 0, 0, 0, 0 };
+		m_trashScrollbarTrack = RectF{ 0, 0, 0, 0 };
+		m_trashScrollbarThumb = RectF{ 0, 0, 0, 0 };
+		m_trashScrollbarDragging = false;
+		m_trashScrollbarGrabOffset = 0.0;
 	}
 
 	m_trashJustOpened = false;
@@ -225,6 +403,22 @@ void CardSystem::setInputSuppressed(bool suppressed)
 		m_trashJustOpened = false;
 		m_deckScroll = 0.0;
 		m_trashScroll = 0.0;
+		m_deckScrollMax = 0.0;
+		m_trashScrollMax = 0.0;
+		m_deckContentRect = RectF{ 0, 0, 0, 0 };
+		m_trashContentRect = RectF{ 0, 0, 0, 0 };
+		m_deckScrollbarTrack = RectF{ 0, 0, 0, 0 };
+		m_trashScrollbarTrack = RectF{ 0, 0, 0, 0 };
+		m_deckScrollbarThumb = RectF{ 0, 0, 0, 0 };
+		m_trashScrollbarThumb = RectF{ 0, 0, 0, 0 };
+		m_deckScrollUpButton = RectF{ 0, 0, 0, 0 };
+		m_deckScrollDownButton = RectF{ 0, 0, 0, 0 };
+		m_trashScrollUpButton = RectF{ 0, 0, 0, 0 };
+		m_trashScrollDownButton = RectF{ 0, 0, 0, 0 };
+		m_deckScrollbarDragging = false;
+		m_trashScrollbarDragging = false;
+		m_deckScrollbarGrabOffset = 0.0;
+		m_trashScrollbarGrabOffset = 0.0;
 	}
 }
 
@@ -317,6 +511,22 @@ void CardSystem::shuffleAllAndDraw(size_t drawCount)
 	m_trashJustOpened = false;
 	m_deckScroll = 0.0;
 	m_trashScroll = 0.0;
+	m_deckScrollMax = 0.0;
+	m_trashScrollMax = 0.0;
+	m_deckContentRect = RectF{ 0, 0, 0, 0 };
+	m_trashContentRect = RectF{ 0, 0, 0, 0 };
+	m_deckScrollbarTrack = RectF{ 0, 0, 0, 0 };
+	m_trashScrollbarTrack = RectF{ 0, 0, 0, 0 };
+	m_deckScrollbarThumb = RectF{ 0, 0, 0, 0 };
+	m_trashScrollbarThumb = RectF{ 0, 0, 0, 0 };
+	m_deckScrollUpButton = RectF{ 0, 0, 0, 0 };
+	m_deckScrollDownButton = RectF{ 0, 0, 0, 0 };
+	m_trashScrollUpButton = RectF{ 0, 0, 0, 0 };
+	m_trashScrollDownButton = RectF{ 0, 0, 0, 0 };
+	m_deckScrollbarDragging = false;
+	m_trashScrollbarDragging = false;
+	m_deckScrollbarGrabOffset = 0.0;
+	m_trashScrollbarGrabOffset = 0.0;
 
 	for (size_t index = 0; index < cards.size(); ++index)
 	{
@@ -476,6 +686,22 @@ void CardSystem::resetDeckState()
 	m_showDeck = false;
 	m_deckJustOpened = false;
 	m_deckScroll = 0.0;
+	m_trashScrollMax = 0.0;
+	m_deckScrollMax = 0.0;
+	m_trashContentRect = RectF{ 0, 0, 0, 0 };
+	m_deckContentRect = RectF{ 0, 0, 0, 0 };
+	m_trashScrollbarTrack = RectF{ 0, 0, 0, 0 };
+	m_deckScrollbarTrack = RectF{ 0, 0, 0, 0 };
+	m_trashScrollbarThumb = RectF{ 0, 0, 0, 0 };
+	m_deckScrollbarThumb = RectF{ 0, 0, 0, 0 };
+	m_trashScrollUpButton = RectF{ 0, 0, 0, 0 };
+	m_trashScrollDownButton = RectF{ 0, 0, 0, 0 };
+	m_deckScrollUpButton = RectF{ 0, 0, 0, 0 };
+	m_deckScrollDownButton = RectF{ 0, 0, 0, 0 };
+	m_trashScrollbarDragging = false;
+	m_deckScrollbarDragging = false;
+	m_trashScrollbarGrabOffset = 0.0;
+	m_deckScrollbarGrabOffset = 0.0;
 	m_draggingIndex.reset();
 	m_drawPile.clear();
 	m_handIndices.clear();
@@ -731,8 +957,8 @@ void CardSystem::updateTransform()
 	m_scale = Math::Min(scaleX, scaleY);
 	m_offset = Vec2{ (sceneWidth - m_virtualSize.x * m_scale) * 0.5, (sceneHeight - m_virtualSize.y * m_scale) * 0.5 };
 
-	const double buttonWidth = 160.0;
-	const double buttonHeight = 60.0;
+	const double buttonWidth = 220.0;
+	const double buttonHeight = 80.0;
 	const double buttonSpacing = 16.0;
 	double trashButtonX = m_offset.x + m_virtualSize.x * m_scale + 60.0;
 	double baseButtonY = m_offset.y + m_virtualSize.y * m_scale - buttonHeight - 40.0;
@@ -769,11 +995,10 @@ void CardSystem::updateTransform()
 	m_endTurnButtonScreen = RectF{ trashButtonX, endTurnButtonY, buttonWidth, buttonHeight };
 	m_deckButtonScreen = RectF{ deckButtonX, trashButtonY, buttonWidth, buttonHeight };
 
-	const Vec2 modalPos{ (sceneWidth - m_trashModalSize.x) * 0.5, (sceneHeight - m_trashModalSize.y) * 0.5 };
-	m_trashModalRect = RectF{ modalPos, m_trashModalSize };
-	m_trashCloseButton = RectF{ m_trashModalRect.tr().movedBy(-46, 6), Vec2{ 36, 36 } };
-	m_deckModalRect = RectF{ modalPos, m_deckModalSize };
-	m_deckCloseButton = RectF{ m_deckModalRect.tr().movedBy(-46, 6), Vec2{ 36, 36 } };
+	m_trashModalRect = RectF{ 0, 0, 0, 0 };
+	m_trashCloseButton = RectF{ 0, 0, 0, 0 };
+	m_deckModalRect = RectF{ 0, 0, 0, 0 };
+	m_deckCloseButton = RectF{ 0, 0, 0, 0 };
 }
 
 void CardSystem::updateCards()
@@ -953,192 +1178,235 @@ void CardSystem::drawCard(const CardInstance& card) const
 
 void CardSystem::drawUI() const
 {
-	const double margin = 20.0;
-	const Vec2 panelSize{ 320, 200 };
-	const RectF background{ margin, Scene::Height() - panelSize.y - margin, panelSize };
-	background.draw(ColorF{ 0.05, 0.05, 0.08, 0.75 });
-	background.drawFrame(2, 0, ColorF{ 0.2, 0.2, 0.3, 0.9 });
+	const auto drawButton =
+		[](const Texture& texture, const RectF& rect, const ColorF& tint) -> bool
+		{
+			if (not texture)
+			{
+				return false;
+			}
 
-	Vec2 logPos = background.pos.movedBy(16, 96);
-	for (size_t i = 0; i < m_playLog.size(); ++i)
-	{
-		m_bodyFont(Format(U"- ", m_playLog[i])).draw(logPos + Vec2{ 0, i * 24.0 }, ColorF{ 0.82 });
-	}
+			const double texW = static_cast<double>(texture.width());
+			const double texH = static_cast<double>(texture.height());
+			if ((texW <= 0.0) || (texH <= 0.0))
+			{
+				return false;
+			}
 
-	const ColorF frameColor = ColorF{ 0.6, 0.55, 0.8, 0.9 };
+			const double scale = Min(rect.w / texW, rect.h / texH);
+			const Vec2 drawPos = rect.center() - Vec2{ texW * scale, texH * scale } * 0.5;
+			texture.scaled(scale).draw(drawPos, tint);
+			return true;
+		};
+
 	const RectF endTurnButtonRect = m_endTurnButtonScreen;
 	const bool endTurnHovered = endTurnButtonRect.mouseOver();
-	const ColorF endTurnColor = endTurnHovered ? ColorF{ 0.68, 0.38, 0.28, 0.95 } : ColorF{ 0.58, 0.32, 0.24, 0.9 };
-	endTurnButtonRect.rounded(12).draw(endTurnColor);
-	endTurnButtonRect.rounded(12).drawFrame(2, 0, frameColor);
-	m_bodyFont(U"ターン終了").drawAt(endTurnButtonRect.center(), ColorF{ 0.95 });
-
-	const ColorF deckButtonColor = m_showDeck ? ColorF{ 0.28, 0.35, 0.32, 0.9 } : ColorF{ 0.22, 0.28, 0.26, 0.85 };
+	const ColorF endTurnTint = endTurnHovered ? ColorF{ 1.0 } : ColorF{ 0.9 };
+	if (not drawButton(m_endTurnTexture, endTurnButtonRect, endTurnTint))
+	{
+		const ColorF fallbackColor = endTurnHovered ? ColorF{ 0.68, 0.38, 0.28, 0.95 } : ColorF{ 0.58, 0.32, 0.24, 0.9 };
+		endTurnButtonRect.rounded(12).draw(fallbackColor);
+		m_bodyFont(U"ターン終了").drawAt(endTurnButtonRect.center(), ColorF{ 0.95 });
+	}
 	const RectF deckButtonRect = m_deckButtonScreen;
-	deckButtonRect.rounded(12).draw(deckButtonColor);
-	deckButtonRect.rounded(12).drawFrame(2, 0, frameColor);
-	m_bodyFont(Format(U"山札 (", m_drawPile.size(), U")")).drawAt(deckButtonRect.center(), ColorF{ 0.95 });
+	const bool deckHovered = deckButtonRect.mouseOver();
+	const ColorF deckTint = m_showDeck ? ColorF{ 1.0 } : (deckHovered ? ColorF{ 0.95 } : ColorF{ 0.85 });
+	if (not drawButton(m_deckButtonTexture, deckButtonRect, deckTint))
+	{
+		const ColorF fallbackColor = m_showDeck ? ColorF{ 0.28, 0.35, 0.32, 0.9 } : ColorF{ 0.22, 0.28, 0.26, deckHovered ? 0.9 : 0.85 };
+		deckButtonRect.rounded(12).draw(fallbackColor);
+		m_bodyFont(U"デッキ").drawAt(deckButtonRect.center(), ColorF{ 0.95 });
+	}
+	const String deckCountText = U"{0}枚"_fmt(m_drawPile.size());
+	const double deckCountCenterY = deckButtonRect.center().y;
+	const Font countFont = (FontAsset::IsRegistered(U"MisakiFont"))
+		? FontAsset(U"MisakiFont")
+		: Font{ 42, Typeface::Medium, FontStyle::Bold };
+	const double scale = 1.35;
+	const RectF baseBounds = countFont(deckCountText).region();
+	const double scaledWidth = baseBounds.w * scale;
+	const double scaledHeight = baseBounds.h * scale;
+	const double deckCountRight = deckButtonRect.rightX() - 32.0;
+	const Vec2 deckCountCenter{
+		deckCountRight - scaledWidth * 1.2,
+		deckCountCenterY
+	};
+	{
+		const Transformer2D transform{ Mat3x2::Scale(scale, deckCountCenter) };
+		countFont(deckCountText).drawAt(deckCountCenter, ColorF{ 0.95 });
+	}
 
-	const ColorF trashButtonColor = m_showTrash ? ColorF{ 0.35, 0.25, 0.45, 0.9 } : ColorF{ 0.25, 0.22, 0.32, 0.85 };
 	const RectF trashButtonRect = m_trashButtonScreen;
-	trashButtonRect.rounded(12).draw(trashButtonColor);
-	trashButtonRect.rounded(12).drawFrame(2, 0, frameColor);
-	m_bodyFont(Format(U"墓地 (", m_trashOrder.size(), U")")).drawAt(trashButtonRect.center(), ColorF{ 0.95 });
+	const bool trashHovered = trashButtonRect.mouseOver();
+	const ColorF trashTint = m_showTrash ? ColorF{ 1.0 } : (trashHovered ? ColorF{ 0.95 } : ColorF{ 0.85 });
+	if (not drawButton(m_trashButtonTexture, trashButtonRect, trashTint))
+	{
+		const ColorF fallbackColor = m_showTrash ? ColorF{ 0.35, 0.25, 0.45, 0.9 } : ColorF{ 0.25, 0.22, 0.32, trashHovered ? 0.9 : 0.85 };
+		trashButtonRect.rounded(12).draw(fallbackColor);
+		m_bodyFont(U"墓地").drawAt(trashButtonRect.center(), ColorF{ 0.95 });
+	}
 
 	if (m_showDeck)
 	{
-		RectF{ 0, 0, Scene::Width(), Scene::Height() }.draw(ColorF{ 0, 0, 0, 0.55 });
+		RectF{ 0, 0, Scene::Width(), Scene::Height() }.draw(ColorF{ 0, 0, 0, 0.75 });
 
-		const RectF modal = m_deckModalRect;
-		modal.rounded(18).draw(ColorF{ 0.08, 0.1, 0.1, 0.96 });
-		modal.rounded(18).drawFrame(3, 0, ColorF{ 0.4, 0.55, 0.55, 0.9 });
-		m_bodyFont(U"山札").draw(modal.pos.movedBy(28, 22), ColorF{ 0.95 });
-
-		const RectF closeButton = m_deckCloseButton;
-		closeButton.rounded(10).draw(ColorF{ 0.3, 0.32, 0.3, 0.9 });
-		closeButton.rounded(10).drawFrame(2, 0, frameColor);
-		m_bodyFont(U"X").drawAt(closeButton.center(), ColorF{ 0.95 });
-
-		const auto& cards = m_deck.cards();
-		const Vec2 cardSize = TrashCardSize;
-		const Vec2 spacing = TrashCardSpacing;
-		const Vec2 contentOrigin = modal.pos.movedBy(TrashPaddingLeft, TrashPaddingTop);
-		const Vec2 contentAreaSize{
-			m_deckModalSize.x - (TrashPaddingLeft + TrashPaddingRight),
-			m_deckModalSize.y - (TrashPaddingTop + TrashPaddingBottom)
-		};
-		const RectF clipRect{ contentOrigin, contentAreaSize };
-		clipRect.drawFrame(2, 0, ColorF{ 0.25, 0.32, 0.32, 0.9 });
-
-		const double availableWidth = Max(0.0, contentAreaSize.x);
-		const double unitWidth = cardSize.x + spacing.x;
-		const int32 maxColumns = (unitWidth > 0.0) ? static_cast<int32>(Math::Floor((availableWidth + spacing.x) / unitWidth)) : 1;
-		const int32 columns = Max<int32>(1, maxColumns);
-		const double viewTop = contentOrigin.y;
-		const double viewBottom = viewTop + contentAreaSize.y;
-
-		Array<size_t> deckOrder = m_drawPile;
-		std::reverse(deckOrder.begin(), deckOrder.end());
-
-		int32 index = 0;
-		for (const size_t deckIndex : deckOrder)
+		const RectF contentRect = m_deckContentRect;
+		if ((contentRect.w > 0.0) && (contentRect.h > 0.0))
 		{
-			if (deckIndex >= cards.size())
+			const double titleY = (contentRect.y > 40.0) ? (contentRect.y - 36.0) : (contentRect.y + 12.0);
+			if (FontAsset::IsRegistered(U"MisakiFont"))
 			{
+				FontAsset(U"MisakiFont")(U"デッキ").draw(Vec2{ contentRect.x, titleY }, ColorF{ 0.95 });
+			}
+			else
+			{
+				m_bodyFont(U"デッキ").draw(Vec2{ contentRect.x, titleY }, ColorF{ 0.95 });
+			}
+
+			const auto& cards = m_deck.cards();
+			Array<size_t> deckOrder = m_drawPile;
+			std::reverse(deckOrder.begin(), deckOrder.end());
+
+			const Vec2 cardSize = TrashCardSize;
+			const Vec2 spacing = TrashCardSpacing;
+			const double unitWidth = cardSize.x + spacing.x;
+			const int32 maxFitColumns = (unitWidth > 0.0)
+				? static_cast<int32>((contentRect.w + spacing.x) / unitWidth)
+				: 1;
+			const int32 columns = Max<int32>(1, Min<int32>(4, maxFitColumns));
+			const double viewTop = contentRect.y;
+			const double viewBottom = viewTop + contentRect.h;
+
+			int32 index = 0;
+			for (const size_t deckIndex : deckOrder)
+			{
+				if (deckIndex >= cards.size())
+				{
+					++index;
+					continue;
+				}
+
+				const auto& card = cards[deckIndex];
+				if (not card.definition)
+				{
+					++index;
+					continue;
+				}
+
+				const int32 row = index / columns;
+				const int32 col = index % columns;
+				const Vec2 pos{
+					contentRect.x + col * unitWidth,
+					contentRect.y + row * (cardSize.y + spacing.y) - m_deckScroll
+				};
+
+				RectF cardRect{ pos, cardSize };
+				const double cardBottom = cardRect.y + cardRect.h;
+				if ((cardBottom < viewTop) || (cardRect.y > viewBottom))
+				{
+					++index;
+					continue;
+				}
+
+				if (const auto textureIt = m_textures.find(card.definition->id); textureIt != m_textures.end())
+				{
+					textureIt->second.resized(cardRect.size).draw(cardRect.pos);
+				}
+				cardRect.drawFrame(3, 0, ColorF{ 0.18, 0.25, 0.23, 0.85 });
 				++index;
-				continue;
 			}
 
-			const auto& card = cards[deckIndex];
-			if (not card.definition)
+			if (deckOrder.isEmpty())
 			{
-				++index;
-				continue;
+				if (FontAsset::IsRegistered(U"MisakiFont"))
+				{
+					FontAsset(U"MisakiFont")(U"デッキは空").drawAt(contentRect.center(), ColorF{ 0.8 });
+				}
+				else
+				{
+					m_bodyFont(U"デッキは空").drawAt(contentRect.center(), ColorF{ 0.8 });
+				}
 			}
-
-			const int32 row = index / columns;
-			const int32 col = index % columns;
-			const Vec2 pos{
-				contentOrigin.x + col * unitWidth,
-				contentOrigin.y + row * (cardSize.y + spacing.y) - m_deckScroll
-			};
-
-			RectF cardRect{ pos, cardSize };
-			const double cardBottom = cardRect.y + cardRect.h;
-			if ((cardBottom < viewTop) || (cardRect.y > viewBottom))
-			{
-				++index;
-				continue;
-			}
-
-			if (const auto textureIt = m_textures.find(card.definition->id); textureIt != m_textures.end())
-			{
-				textureIt->second.resized(cardRect.size).draw(cardRect.pos);
-			}
-			cardRect.drawFrame(3, 0, ColorF{ 0.18, 0.25, 0.23, 0.85 });
-			++index;
-		}
-
-		if (deckOrder.isEmpty())
-		{
-			m_bodyFont(U"山札は空").drawAt(clipRect.center(), ColorF{ 0.8 });
 		}
 	}
 	else if (m_showTrash)
 	{
-		RectF{ 0, 0, Scene::Width(), Scene::Height() }.draw(ColorF{ 0, 0, 0, 0.55 });
+		RectF{ 0, 0, Scene::Width(), Scene::Height() }.draw(ColorF{ 0, 0, 0, 0.75 });
 
-		const RectF modal = m_trashModalRect;
-		modal.rounded(18).draw(ColorF{ 0.08, 0.09, 0.12, 0.96 });
-		modal.rounded(18).drawFrame(3, 0, ColorF{ 0.4, 0.45, 0.6, 0.9 });
-		m_bodyFont(U"墓地").draw(modal.pos.movedBy(28, 22), ColorF{ 0.95 });
-
-		const RectF closeButton = m_trashCloseButton;
-		closeButton.rounded(10).draw(ColorF{ 0.3, 0.25, 0.35, 0.9 });
-		closeButton.rounded(10).drawFrame(2, 0, frameColor);
-		m_bodyFont(U"X").drawAt(closeButton.center(), ColorF{ 0.95 });
-
-		const auto& cards = m_deck.cards();
-		const Vec2 cardSize = TrashCardSize;
-		const Vec2 spacing = TrashCardSpacing;
-		const Vec2 contentOrigin = modal.pos.movedBy(TrashPaddingLeft, TrashPaddingTop);
-		const Vec2 contentAreaSize{
-			m_trashModalSize.x - (TrashPaddingLeft + TrashPaddingRight),
-			m_trashModalSize.y - (TrashPaddingTop + TrashPaddingBottom)
-		};
-		const RectF clipRect{ contentOrigin, contentAreaSize };
-		clipRect.drawFrame(2, 0, ColorF{ 0.25, 0.28, 0.36, 0.9 });
-
-		const double availableWidth = Max(0.0, contentAreaSize.x);
-		const double unitWidth = cardSize.x + spacing.x;
-		const int32 maxColumns = (unitWidth > 0.0) ? static_cast<int32>(Math::Floor((availableWidth + spacing.x) / unitWidth)) : 1;
-		const int32 columns = Max<int32>(1, maxColumns);
-		const double viewTop = contentOrigin.y;
-		const double viewBottom = viewTop + contentAreaSize.y;
-
-		int32 index = 0;
-		for (const size_t deckIndex : m_trashOrder)
+		const RectF contentRect = m_trashContentRect;
+		if ((contentRect.w > 0.0) && (contentRect.h > 0.0))
 		{
-			if (deckIndex >= cards.size())
+			const double titleY = (contentRect.y > 40.0) ? (contentRect.y - 36.0) : (contentRect.y + 12.0);
+			if (FontAsset::IsRegistered(U"MisakiFont"))
 			{
+				FontAsset(U"MisakiFont")(U"墓地").draw(Vec2{ contentRect.x, titleY }, ColorF{ 0.95 });
+			}
+			else
+			{
+				m_bodyFont(U"墓地").draw(Vec2{ contentRect.x, titleY }, ColorF{ 0.95 });
+			}
+
+			const auto& cards = m_deck.cards();
+			const Vec2 cardSize = TrashCardSize;
+			const Vec2 spacing = TrashCardSpacing;
+			const double unitWidth = cardSize.x + spacing.x;
+			const int32 maxFitColumns = (unitWidth > 0.0)
+				? static_cast<int32>((contentRect.w + spacing.x) / unitWidth)
+				: 1;
+			const int32 columns = Max<int32>(1, Min<int32>(4, maxFitColumns));
+			const double viewTop = contentRect.y;
+			const double viewBottom = viewTop + contentRect.h;
+
+			int32 index = 0;
+			for (const size_t deckIndex : m_trashOrder)
+			{
+				if (deckIndex >= cards.size())
+				{
+					++index;
+					continue;
+				}
+
+				const auto& card = cards[deckIndex];
+				if (not card.definition)
+				{
+					++index;
+					continue;
+				}
+
+				const int32 row = index / columns;
+				const int32 col = index % columns;
+				const Vec2 pos{
+					contentRect.x + col * unitWidth,
+					contentRect.y + row * (cardSize.y + spacing.y) - m_trashScroll
+				};
+
+				RectF cardRect{ pos, cardSize };
+				const double cardBottom = cardRect.y + cardRect.h;
+				if ((cardBottom < viewTop) || (cardRect.y > viewBottom))
+				{
+					++index;
+					continue;
+				}
+
+				if (const auto textureIt = m_textures.find(card.definition->id); textureIt != m_textures.end())
+				{
+					textureIt->second.resized(cardRect.size).draw(cardRect.pos);
+				}
+				cardRect.drawFrame(3, 0, ColorF{ 0.18, 0.18, 0.25, 0.85 });
 				++index;
-				continue;
 			}
 
-			const auto& card = cards[deckIndex];
-			if (not card.definition)
+			if (m_trashOrder.empty())
 			{
-				++index;
-				continue;
+				if (FontAsset::IsRegistered(U"MisakiFont"))
+				{
+					FontAsset(U"MisakiFont")(U"墓地は空").drawAt(contentRect.center(), ColorF{ 0.8 });
+				}
+				else
+				{
+					m_bodyFont(U"墓地は空").drawAt(contentRect.center(), ColorF{ 0.8 });
+				}
 			}
-
-			const int32 row = index / columns;
-			const int32 col = index % columns;
-			const Vec2 pos{
-				contentOrigin.x + col * unitWidth,
-				contentOrigin.y + row * (cardSize.y + spacing.y) - m_trashScroll
-			};
-
-			RectF cardRect{ pos, cardSize };
-			const double cardBottom = cardRect.y + cardRect.h;
-			if ((cardBottom < viewTop) || (cardRect.y > viewBottom))
-			{
-				++index;
-				continue;
-			}
-
-			if (const auto textureIt = m_textures.find(card.definition->id); textureIt != m_textures.end())
-			{
-				textureIt->second.resized(cardRect.size).draw(cardRect.pos);
-			}
-			cardRect.drawFrame(3, 0, ColorF{ 0.18, 0.18, 0.25, 0.85 });
-			++index;
-		}
-
-		if (m_trashOrder.empty())
-		{
-			const Vec2 emptyMessagePos = clipRect.center();
-			m_bodyFont(U"墓地は空").drawAt(emptyMessagePos, ColorF{ 0.8 });
 		}
 	}
 }

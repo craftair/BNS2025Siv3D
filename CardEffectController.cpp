@@ -852,11 +852,9 @@ void CardEffectController::drawDeckSelection() const
 
 		const CardInstance* instance = m_cardSystem->instanceAt(deckIndex);
 		const Texture* texture = nullptr;
-		String cardLabel;
 		if (instance && instance->definition)
 		{
 			texture = m_cardSystem->textureForCard(instance->definition->id);
-			cardLabel = instance->definition->name;
 		}
 
 		if (texture)
@@ -870,19 +868,6 @@ void CardEffectController::drawDeckSelection() const
 
 		rect.drawFrame(4, 0, frameColor);
 
-		if (not cardLabel.isEmpty())
-		{
-			const Vec2 labelPos = rect.pos.movedBy(0, rect.h + 8);
-			if (FontAsset::IsRegistered(U"MisakiFont"))
-			{
-				FontAsset(U"MisakiFont")(cardLabel).draw(labelPos, ColorF{ 0.93 });
-			}
-			else
-			{
-				static const Font fallback{ 20 };
-				fallback(cardLabel).draw(labelPos, ColorF{ 0.93 });
-			}
-		}
 	}
 
 	if (m_deckSelectionLimited)

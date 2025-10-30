@@ -8,6 +8,7 @@ public:
 	bool loadFromJSON(const FilePathView& path, const Vec2& virtualSize);
 	void update();
 	void draw() const;
+	void setTileTexture(const FilePathView& path);
 	Vec2 gridToWorld(const Point& gridPos) const;
 	Vec2 tileSize() const { return m_tileSize; }
 	Vec2 origin() const { return m_origin; }

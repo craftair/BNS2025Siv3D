@@ -10,6 +10,28 @@ StageScene::StageScene(const InitData& init, StageConfig config)
 
 	const Vec2 virtualSize{ 1280, 720 };
 	const String mapPath = U"resources/txt/Stage{}"_fmt(m_config.stageIndex) + U".json";
+	String backgroundPath = U"resources/texture/field/background.png";
+
+	if (const JSON stageJson = JSON::Load(mapPath))
+	{
+		const JSON backgroundNode = stageJson[U"background"];
+		if (const auto opt = backgroundNode.getOpt<String>())
+		{
+			if (not opt->isEmpty())
+			{
+				backgroundPath = *opt;
+			}
+		}
+	}
+
+	try
+	{
+		m_backgroundTexture = Texture{ backgroundPath, TextureDesc::Mipped };
+	}
+	catch (...)
+	{
+		m_backgroundTexture = Texture{};
+	}
 
 	if (not m_mapSystem.loadFromJSON(mapPath, virtualSize))
 	{
@@ -199,18 +221,39 @@ void StageScene::update()
 
 void StageScene::draw() const
 {
-	Scene::SetBackground(ColorF{ 0.12, 0.12, 0.16 });
-	m_mapSystem.draw();
-	if (not m_gameOver)
+	Scene::SetBackground(ColorF{ 0.0 });
+
+	if (m_backgroundTexture)
 	{
-		m_cardEffects.draw();
+		const Size texSize = m_backgroundTexture.size();
+		if ((texSize.x > 0) && (texSize.y > 0))
+		{
+			const double scaleX = Scene::Width() / static_cast<double>(texSize.x);
+			const double scaleY = Scene::Height() / static_cast<double>(texSize.y);
+			const double scale = Max(scaleX, scaleY);
+			m_backgroundTexture.scaled(scale).drawAt(Scene::Center());
+		}
+		else
+		{
+			RectF{ 0, 0, Scene::Width(), Scene::Height() }.draw(ColorF{ 0.12, 0.12, 0.16 });
+		}
 	}
-	drawActionCounter();
+	else
+	{
+		RectF{ 0, 0, Scene::Width(), Scene::Height() }.draw(ColorF{ 0.12, 0.12, 0.16 });
+	}
+
+	m_mapSystem.draw();
 	m_player.draw(m_mapSystem);
 	m_cardSystem.draw();
 	drawKanjiPanel();
 	drawTreasureSelection();
+	if (not m_gameOver)
+	{
+		m_cardEffects.draw();
+	}
 	drawClearModal();
+	drawActionCounter();
 }
 
 void StageScene::drawActionCounter() const

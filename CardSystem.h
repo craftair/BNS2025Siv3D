@@ -71,6 +71,9 @@ private:
 	Array<String> m_playLog;
 	HashTable<String, Texture> m_textures;
 	Font m_bodyFont{ 18 };
+	Texture m_deckButtonTexture;
+	Texture m_trashButtonTexture;
+	Texture m_endTurnTexture;
 
 	Array<size_t> m_trashOrder;
 	bool m_showTrash = false;
@@ -88,6 +91,22 @@ private:
 	RectF m_deckCloseButton{ 0, 0, 0, 0 };
 	double m_trashScroll = 0.0;
 	double m_deckScroll = 0.0;
+	double m_trashScrollMax = 0.0;
+	double m_deckScrollMax = 0.0;
+	RectF m_trashContentRect{ 0, 0, 0, 0 };
+	RectF m_deckContentRect{ 0, 0, 0, 0 };
+	RectF m_trashScrollbarTrack{ 0, 0, 0, 0 };
+	RectF m_deckScrollbarTrack{ 0, 0, 0, 0 };
+	RectF m_trashScrollbarThumb{ 0, 0, 0, 0 };
+	RectF m_deckScrollbarThumb{ 0, 0, 0, 0 };
+	RectF m_trashScrollUpButton{ 0, 0, 0, 0 };
+	RectF m_trashScrollDownButton{ 0, 0, 0, 0 };
+	RectF m_deckScrollUpButton{ 0, 0, 0, 0 };
+	RectF m_deckScrollDownButton{ 0, 0, 0, 0 };
+	bool m_trashScrollbarDragging = false;
+	bool m_deckScrollbarDragging = false;
+	double m_trashScrollbarGrabOffset = 0.0;
+	double m_deckScrollbarGrabOffset = 0.0;
 	Array<size_t> m_drawPile;
 	Array<size_t> m_handIndices;
 	bool m_inputSuppressed = false;

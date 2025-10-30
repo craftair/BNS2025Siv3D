@@ -290,6 +290,18 @@ void MapSystem::draw() const
 	}
 }
 
+void MapSystem::setTileTexture(const FilePathView& path)
+{
+	try
+	{
+		m_tileTexture = Texture{ path, TextureDesc::Mipped };
+	}
+	catch (...)
+	{
+		m_tileTexture = Texture{};
+	}
+}
+
 void MapSystem::updateTransform()
 {
 	const double sceneWidth = Scene::Width();
@@ -531,5 +543,6 @@ void MapSystem::removeObjectAt(const Point& gridPos)
 		return placement.gridPos == gridPos;
 	});
 }
+
 
 
