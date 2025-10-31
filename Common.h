@@ -23,6 +23,7 @@ struct GameData
 	HashSet<String> kanjiOwned = { U"進" };
 	HashSet<int32> kanjiRewardStagesClaimed;
 	HashSet<String> unlockedCards;
+	bool completedGame = false;
 };
 
 using App = SceneManager<State, GameData>;

@@ -19,28 +19,42 @@ void Ending::draw() const
 	full.draw(Arg::top = ColorF{ 0.12, 0.14, 0.2 }, Arg::bottom = ColorF{ 0.02, 0.03, 0.05 });
 
 	const Vec2 headingCenter{ Scene::CenterF().x, Scene::Height() * 0.22 };
-	m_titleFont(U"終わり(仮)").drawAt(headingCenter, ColorF{ 0.96 });
-	//m_bodyFont(U"あなたの冒険はここで完結です").drawAt(headingCenter.movedBy(0, 56), ColorF{ 0.88 });
+	m_titleFont(U"エンディング(仮)").drawAt(headingCenter, ColorF{ 0.96 });
 
 	const Vec2 focusCenter = Scene::CenterF().movedBy(0, 24);
-	Circle{ focusCenter, 220 }.draw(ColorF{ 0.45, 0.55, 0.92, 0.18 });
+	const auto& data = getData();
 
-	if (m_illustration)
+	if (data.completedGame)
 	{
-		const Size imageSize = m_illustration.size();
-		Vec2 drawSize = Vec2{ imageSize };
-		if ((imageSize.x > 0) && (imageSize.y > 0))
+		Circle{ focusCenter, 220 }.draw(ColorF{ 0.45, 0.55, 0.92, 0.18 });
+
+		if (m_illustration)
 		{
-			const Vec2 targetSize{ 520, 360 };
-			const double scale = Min(targetSize.x / drawSize.x, targetSize.y / drawSize.y);
-			drawSize *= scale;
+			const Size imageSize = m_illustration.size();
+			Vec2 drawSize = Vec2{ imageSize };
+			if ((imageSize.x > 0) && (imageSize.y > 0))
+			{
+				const Vec2 targetSize{ 520, 360 };
+				const double scale = Min(targetSize.x / drawSize.x, targetSize.y / drawSize.y);
+				drawSize *= scale;
+			}
+			const Vec2 drawPos = focusCenter - drawSize * 0.5;
+			m_illustration.resized(drawSize.x, drawSize.y).draw(drawPos);
 		}
-		const Vec2 drawPos = focusCenter - drawSize * 0.5;
-		m_illustration.resized(drawSize.x, drawSize.y).draw(drawPos);
+		else
+		{
+			Circle{ focusCenter, 160 }.draw(ColorF{ 0.6, 0.72, 0.96, 0.35 });
+		}
 	}
 	else
 	{
-		Circle{ focusCenter, 160 }.draw(ColorF{ 0.6, 0.72, 0.96, 0.35 });
+		RectF highlightSquare{ 0, 0, 440, 440 };
+		highlightSquare.setCenter(focusCenter);
+		highlightSquare.draw(ColorF{ 0.45, 0.55, 0.92, 0.18 });
+
+		RectF resultSquare{ 0, 0, 320, 320 };
+		resultSquare.setCenter(focusCenter);
+		resultSquare.draw(ColorF{ 0.6, 0.72, 0.96, 0.35 });
 	}
 
 	const RectF button = buttonRect();
@@ -68,4 +82,3 @@ RectF Ending::buttonRect() const
 	const double y = Scene::Height() - m_buttonSize.y - m_buttonMargin;
 	return RectF{ Vec2{ x, y }, m_buttonSize };
 }
-
