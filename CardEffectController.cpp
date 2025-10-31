@@ -93,16 +93,28 @@ void CardEffectController::draw() const
 
 void CardEffectController::onCardPlayed(const String& cardId)
 {
+	if (m_cardSystem)
+	{
+		m_cardSystem->setInputSuppressed(true);
+	}
+
 	if (cardId == U"ha")
 	{
 		const size_t repeatCount = 1 + m_nextCardRepeats;
 		m_nextCardRepeats = 0;
 		m_nextCardRepeats += repeatCount;
+
+		if (m_cardSystem)
+		{
+			m_cardSystem->setInputSuppressed(false);
+		}
 		return;
 	}
 
 	const size_t repeatCount = 1 + m_nextCardRepeats;
 	m_nextCardRepeats = 0;
+
+	bool queuedTargetedEffect = false;
 
 	for (size_t i = 0; i < repeatCount; ++i)
 	{
@@ -111,7 +123,13 @@ void CardEffectController::onCardPlayed(const String& cardId)
 			continue;
 		}
 
+		queuedTargetedEffect = true;
 		enqueueTargetedEffect(cardId);
+	}
+
+	if (m_cardSystem && (not queuedTargetedEffect) && (not hasPendingEffects()))
+	{
+		m_cardSystem->setInputSuppressed(false);
 	}
 }
 
@@ -1186,11 +1204,6 @@ void CardEffectController::startChokuTargeting()
 
 void CardEffectController::clearTargeting(bool processQueue)
 {
-	if (m_cardSystem)
-	{
-		m_cardSystem->setInputSuppressed(false);
-	}
-
 	m_state = EffectState::None;
 	m_targetOptions.clear();
 	m_hoverTarget.reset();
@@ -1207,6 +1220,11 @@ void CardEffectController::clearTargeting(bool processQueue)
 	if (processQueue)
 	{
 		tryActivateNextCard();
+	}
+
+	if (m_cardSystem && (not hasPendingEffects()))
+	{
+		m_cardSystem->setInputSuppressed(false);
 	}
 }
 
@@ -1380,4 +1398,9 @@ bool CardEffectController::isBox(const Point& gridPos) const
 	}
 
 	return (ToMapObjectType(m_mapSystem->objectIdAt(gridPos)) == MapObjectType::Box);
+}
+
+bool CardEffectController::hasPendingEffects() const
+{
+	return (m_state != EffectState::None) || (not m_pendingCardEffects.isEmpty());
 }

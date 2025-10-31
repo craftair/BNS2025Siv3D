@@ -1208,7 +1208,8 @@ void CardSystem::drawScene() const
 {
 	const Transformer2D transformer{ Mat3x2::Scale(m_scale).translated(m_offset) };
 
-	RectF{ 0, 0, m_virtualSize.x, m_activationLine }.draw(ColorF{ 0.15, 0.18, 0.3, 0.15 });
+	// The activation line used to tint the area above; keep it visually neutral.
+	//RectF{ 0, 0, m_virtualSize.x, m_activationLine }.draw(ColorF{ 0.15, 0.18, 0.3, 0.15 });
 	//Line{ 0, m_activationLine, m_virtualSize.x, m_activationLine }.draw(6, ColorF{ 0.85, 0.3, 0.3, 0.9 });
 
 	const auto& cards = m_deck.cards();

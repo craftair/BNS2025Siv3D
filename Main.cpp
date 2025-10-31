@@ -2,6 +2,7 @@
 #include "Common.h"
 #include "Title.h"
 #include "Monolog.h"
+#include "Tutorial.h"
 #include "Stage1.h"
 #include "Stage2.h"
 #include "Stage3.h"
@@ -56,6 +57,7 @@ void Main()
 	App manager;
 	manager.add<Title>(State::Title);
 	manager.add<Monolog>(State::Monolog);
+	manager.add<Tutorial>(State::Tutorial);
 	manager.add<Stage1>(State::Stage1);
 	manager.add<Stage2>(State::Stage2);
 	manager.add<Stage3>(State::Stage3);

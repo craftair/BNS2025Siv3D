@@ -145,7 +145,7 @@ StageScene::StageScene(const InitData& init, StageConfig config)
 		m_cardSystem.addCardToDeck(cardId);
 	}
 
-	m_previousPlayerGrid = m_player.gridPosition();
+	m_settledPlayerGrid = m_player.gridPosition();
 }
 
 void StageScene::activateYakuEffect()
@@ -230,9 +230,6 @@ void StageScene::update()
 		clearDebuffImmunity();
 	}
 
-	const Point before = m_player.gridPosition();
-	m_previousPlayerGrid = before;
-
 	m_cardSystem.update();
 
 	if (m_gameOver)
@@ -242,14 +239,33 @@ void StageScene::update()
 
 	m_cardEffects.update();
 
-	const Point after = m_player.gridPosition();
-	if (after != before)
+	if (not m_player.isAnimating())
 	{
-		handleMovement(before, after);
-	}
+		Point currentGrid = m_player.gridPosition();
+		int32 safeguard = 0;
 
-	m_mapSystem.revealAround(m_player.gridPosition());
-	m_previousPlayerGrid = m_player.gridPosition();
+		while ((currentGrid != m_settledPlayerGrid) && (safeguard < 8))
+		{
+			const Point from = m_settledPlayerGrid;
+			const Point to = currentGrid;
+			m_settledPlayerGrid = to;
+			handleMovement(from, to);
+			++safeguard;
+
+			if (m_player.isAnimating())
+			{
+				break;
+			}
+
+			currentGrid = m_player.gridPosition();
+		}
+
+		if (not m_player.isAnimating())
+		{
+			m_settledPlayerGrid = m_player.gridPosition();
+			m_mapSystem.revealAround(m_settledPlayerGrid);
+		}
+	}
 }
 
 void StageScene::draw() const

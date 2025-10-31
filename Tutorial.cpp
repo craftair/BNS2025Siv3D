@@ -1,17 +1,6 @@
-﻿#include "Tutorial.h"
+#include "Tutorial.h"
 
 Tutorial::Tutorial(const InitData& init)
-	: IScene{ init }
+	: StageScene{ init, StageConfig{ .stageIndex = 0, .nextState = State::Stage1, .nextButtonText = U"ステージ1へ" } }
 {
-
-}
-
-void Tutorial::update()
-{
-
-}
-
-void Tutorial::draw() const
-{
-	Scene::SetBackground(ColorF{ 1.0 });
 }

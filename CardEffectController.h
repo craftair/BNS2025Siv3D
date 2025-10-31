@@ -90,6 +90,7 @@ private:
 	void beginDeckSelection(DeckSelectionType type);
 	void updateDeckSelection();
 	void drawDeckSelection() const;
+	bool hasPendingEffects() const;
 
 	DeckSelectionType m_deckSelectionType = DeckSelectionType::None;
 	Array<size_t> m_deckSelectionIndices;

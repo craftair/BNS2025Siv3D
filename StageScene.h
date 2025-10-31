@@ -70,7 +70,7 @@ private:
 	CardSystem m_cardSystem;
 	Player m_player;
 	CardEffectController m_cardEffects;
-	Point m_previousPlayerGrid{ 0, 0 };
+	Point m_settledPlayerGrid{ 0, 0 };
 	int32 m_actionsUsed = 0;
 
 	struct TreasureSelection
