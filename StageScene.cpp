@@ -309,6 +309,11 @@ void StageScene::draw() const
 	{
 		m_cardEffects.draw();
 	}
+	
+	const double headerHeight = Scene::Height() * 0.1;
+	const ColorF headerColor{ 0x28 / 255.0, 0x27 / 255.0, 0x26 / 255.0 };
+	RectF{ 0, 0, Scene::Width(), headerHeight }.draw(headerColor);
+	
 	drawClearModal();
 	drawActionCounter();
 }
@@ -317,16 +322,21 @@ void StageScene::drawActionCounter() const
 {
 	const String text = U"行動回数: {}"_fmt(m_actionsRemaining);
 	const ColorF color = (m_actionsRemaining <= 1) ? ColorF{ 0.98, 0.35, 0.35 } : ColorF{ 0.95 };
-	const Vec2 pos{ 20, 16 };
+	const double headerHeight = Scene::Height() * 0.1;
+	const Vec2 basePos{ 32, headerHeight * 0.5 };
 
 	if (FontAsset::IsRegistered(U"MisakiFont"))
 	{
-		FontAsset(U"MisakiFont")(text).draw(pos, color);
+		const Vec2 drawPos = basePos - Vec2{ 0, 20 };
+		const double scale = 2.0;
+		Transformer2D t{ Mat3x2::Scale(scale, drawPos) };
+		FontAsset(U"MisakiFont")(text).draw(drawPos, color);
 	}
 	else
 	{
-		static const Font fallbackFont{ 28 };
-		fallbackFont(text).draw(pos, color);
+		static const Font fallbackFont{ 40, Typeface::Bold };
+		const Vec2 drawPos = basePos - Vec2{ 0, fallbackFont.height() * 0.5 };
+		fallbackFont(text).draw(drawPos, color);
 	}
 }
 
@@ -377,6 +387,8 @@ void StageScene::handleGameOver()
 	m_cardEffects.clearAllEffects();
 	deactivateFullMapVision();
 	clearDebuffImmunity();
+	auto& data = getData();
+	data.completedGame = false;
 	changeScene(State::Ending);
 }
 
@@ -603,6 +615,9 @@ void StageScene::handleGoalReached()
 		data.totalActions += m_actionsUsed;
 		m_resultRecorded = true;
 	}
+
+	auto& data = getData();
+	data.completedGame = true;
 }
 
 StageScene::ClearModalLayout StageScene::makeClearModalLayout() const
@@ -977,7 +992,7 @@ void StageScene::drawKanjiPanel() const
 	const double baseY = deckRect.y - slotSize.y - gapFromDeck;
 	const double clampedX = Clamp(unclampedX, 20.0, Scene::Width() - totalWidth - 20.0);
 	const double clampedY = Max(16.0, baseY);
-	const Vec2 basePos{ clampedX, clampedY };
+	const Vec2 basePos{ clampedX + 30, clampedY };
 
 	for (size_t i = 0; i < slotCount; ++i)
 	{
