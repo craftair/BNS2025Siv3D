@@ -96,4 +96,6 @@ private:
 	Optional<String> m_pendingKanjiReward;
 	Array<String> m_pendingRewardCards;
 	Texture m_backgroundTexture;
+	Texture m_kanjiSlotTexture;
+	HashTable<String, Texture> m_kanjiTextures;
 };

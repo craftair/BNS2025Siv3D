@@ -30,11 +30,18 @@ public:
 	Array<Array<bool>> visibilitySnapshot() const;
 	void applyVisibility(const Array<Array<bool>>& visibility);
 	void revealAll();
+	bool isCameraWatchTile(const Point& gridPos) const;
+	Optional<Point> cameraForWatchTile(const Point& gridPos) const;
 
 private:
 	void updateTransform();
 	void initializeVisibility(bool visible);
 	void setAllVisible(bool visible);
+	void clearCameraWatchData();
+	void registerCameraWatchTile(const Point& cameraPos, const Point& watchPos);
+	void removeCameraWatchTiles(const Point& cameraPos);
+	void removeCameraWatchTile(const Point& watchPos);
+	void ensureCameraWatchTexture();
 
 	Vec2 m_virtualSize{ 1280, 720 };
 	Vec2 m_tileSize{ 96, 96 };
@@ -54,6 +61,9 @@ private:
 	Array<ObjectPlacement> m_objectPlacements;
 
 	Texture m_fogTexture;
+	Texture m_cameraWatchTexture;
+	HashTable<Point, Array<Point>> m_cameraWatchTiles;
+	HashTable<Point, Point> m_watchTileOwners;
 	double m_scale = 1.0;
 	Vec2 m_offset{ 0, 0 };
 	bool m_fogOfWarEnabled = false;

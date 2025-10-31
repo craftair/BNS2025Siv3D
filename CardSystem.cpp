@@ -770,87 +770,149 @@ void CardSystem::removeFromHand(size_t cardIndex)
 void CardSystem::layoutHand()
 {
 	auto& cards = m_deck.cards();
-	if (m_handIndices.isEmpty())
+	Array<size_t> activeIndices;
+	activeIndices.reserve(m_handIndices.size());
+	for (const size_t index : m_handIndices)
+	{
+		if (index >= cards.size())
+		{
+			continue;
+		}
+
+		auto& card = cards[index];
+		if (card.inTrash)
+		{
+			continue;
+		}
+		activeIndices << index;
+	}
+
+	if (activeIndices.isEmpty())
 	{
 		m_activationLine = m_virtualSize.y * 0.65;
+		m_hoverCardIndex.reset();
 		return;
 	}
 
-	const size_t count = m_handIndices.size();
-	const size_t columns = (m_config.columns > 0) ? Min(m_config.columns, count) : count;
-	const size_t rows = (count + columns - 1) / columns;
-
-	Array<double> columnWidths(columns, 0.0);
-	Array<double> rowHeights(rows, 0.0);
-
-	for (size_t i = 0; i < count; ++i)
-	{
-		const auto& card = cards[m_handIndices[i]];
-		const size_t col = i % columns;
-		const size_t row = i / columns;
-		columnWidths[col] = Max(columnWidths[col], card.rect.w);
-		rowHeights[row] = Max(rowHeights[row], card.rect.h);
-	}
-
-	double totalWidth = 0.0;
-	for (size_t c = 0; c < columns; ++c)
-	{
-		if (c > 0)
-		{
-			totalWidth += m_config.gap;
-		}
-		totalWidth += columnWidths[c];
-	}
-
-	double totalHeight = 0.0;
-	for (size_t r = 0; r < rows; ++r)
-	{
-		if (r > 0)
-		{
-			totalHeight += m_config.gap;
-		}
-		totalHeight += rowHeights[r];
-	}
-
+	const size_t count = activeIndices.size();
 	const double extraRightPadding = 200.0;
-	const double startX = Max(40.0, m_virtualSize.x - m_config.margin - extraRightPadding - totalWidth);
-	const double startY = m_virtualSize.y - m_config.margin - totalHeight;
 
-	Array<double> columnOffsets(columns, 0.0);
+	if (count <= 4)
 	{
-		double accum = 0.0;
+		const size_t columns = (m_config.columns > 0) ? Min(m_config.columns, count) : count;
+		const size_t rows = (count + columns - 1) / columns;
+
+		Array<double> columnWidths(columns, 0.0);
+		Array<double> rowHeights(rows, 0.0);
+
+		for (size_t i = 0; i < count; ++i)
+		{
+			const auto& card = cards[activeIndices[i]];
+			const size_t col = i % columns;
+			const size_t row = i / columns;
+			columnWidths[col] = Max(columnWidths[col], card.rect.w);
+			rowHeights[row] = Max(rowHeights[row], card.rect.h);
+		}
+
+		double totalWidth = 0.0;
 		for (size_t c = 0; c < columns; ++c)
 		{
-			columnOffsets[c] = accum;
-			accum += columnWidths[c] + m_config.gap;
+			if (c > 0)
+			{
+				totalWidth += m_config.gap;
+			}
+			totalWidth += columnWidths[c];
 		}
-	}
 
-	Array<double> rowOffsets(rows, 0.0);
-	{
-		double accum = 0.0;
+		double totalHeight = 0.0;
 		for (size_t r = 0; r < rows; ++r)
 		{
-			rowOffsets[r] = accum;
-			accum += rowHeights[r] + m_config.gap;
+			if (r > 0)
+			{
+				totalHeight += m_config.gap;
+			}
+			totalHeight += rowHeights[r];
 		}
+
+		const double startX = Max(40.0, m_virtualSize.x - m_config.margin - extraRightPadding - totalWidth);
+		const double startY = m_virtualSize.y - m_config.margin - totalHeight;
+
+		Array<double> columnOffsets(columns, 0.0);
+		{
+			double accum = 0.0;
+			for (size_t c = 0; c < columns; ++c)
+			{
+				columnOffsets[c] = accum;
+				accum += columnWidths[c] + m_config.gap;
+			}
+		}
+
+		Array<double> rowOffsets(rows, 0.0);
+		{
+			double accum = 0.0;
+			for (size_t r = 0; r < rows; ++r)
+			{
+				rowOffsets[r] = accum;
+				accum += rowHeights[r] + m_config.gap;
+			}
+		}
+
+		for (size_t i = 0; i < count; ++i)
+		{
+			auto& card = cards[activeIndices[i]];
+			const size_t col = i % columns;
+			const size_t row = i / columns;
+			const Vec2 pos{
+				startX + columnOffsets[col] + (columnWidths[col] - card.rect.w) * 0.5,
+				startY + rowOffsets[row] + (rowHeights[row] - card.rect.h) * 0.5
+			};
+			card.homePosition = pos;
+			card.rect.pos = pos;
+			card.inHand = true;
+		}
+
+		m_activationLine = Max(0.0, startY - m_config.activationOffset);
+		m_hoverCardIndex.reset();
+		return;
 	}
 
-	for (size_t i = 0; i < count; ++i)
+	double maxCardWidth = cards[activeIndices.front()].rect.w;
+	double maxCardHeight = cards[activeIndices.front()].rect.h;
+	for (const size_t index : activeIndices)
 	{
-		auto& card = cards[m_handIndices[i]];
-		const size_t col = i % columns;
-		const size_t row = i / columns;
+		const auto& card = cards[index];
+		maxCardWidth = Max(maxCardWidth, card.rect.w);
+		maxCardHeight = Max(maxCardHeight, card.rect.h);
+	}
+
+	const double minStep = maxCardWidth * 0.2;
+	const double minSpan = maxCardWidth + minStep * static_cast<double>(count - 1);
+	const double referenceSpan = (maxCardWidth * 4.0) + (m_config.gap * 3.0);
+	const double desiredSpan = Max(referenceSpan, maxCardWidth * 1.2);
+	const double availableSpan = Max(maxCardWidth, m_virtualSize.x - (m_config.margin * 2.0) - extraRightPadding);
+	const double maxSpan = Max(minSpan, availableSpan);
+	double spanGoal = Clamp(desiredSpan, minSpan, maxSpan);
+	double step = (spanGoal - maxCardWidth) / static_cast<double>(count - 1);
+	step = Max(step, minStep);
+
+	const double totalSpan = maxCardWidth + step * static_cast<double>(count - 1);
+	const double startX = Max(40.0, m_virtualSize.x - m_config.margin - extraRightPadding - totalSpan);
+	const double startY = m_virtualSize.y - m_config.margin - maxCardHeight;
+
+	for (size_t i = 0; i < activeIndices.size(); ++i)
+	{
+		auto& card = cards[activeIndices[i]];
 		const Vec2 pos{
-			startX + columnOffsets[col] + (columnWidths[col] - card.rect.w) * 0.5,
-			startY + rowOffsets[row] + (rowHeights[row] - card.rect.h) * 0.5
+			startX + step * static_cast<double>(i),
+			startY + (maxCardHeight - card.rect.h) * 0.5
 		};
-		card.rect.pos = pos;
 		card.homePosition = pos;
+		card.rect.pos = pos;
 		card.inHand = true;
 	}
 
 	m_activationLine = Max(0.0, startY - m_config.activationOffset);
+	m_hoverCardIndex.reset();
 }
 
 void CardSystem::drawHand(size_t desiredCount)
@@ -1008,8 +1070,35 @@ void CardSystem::updateCards()
 
 	updateDragging(cursorVirtual);
 
-	for (auto& card : cards)
+	if (m_draggingIndex)
 	{
+		m_hoverCardIndex.reset();
+	}
+	else
+	{
+		m_hoverCardIndex.reset();
+		if (isInsideVirtual(cursorVirtual))
+		{
+			for (int32 i = static_cast<int32>(cards.size()) - 1; i >= 0; --i)
+			{
+				const auto& card = cards[i];
+				if (card.inTrash || (not card.inHand) || card.isDragging)
+				{
+					continue;
+				}
+
+				if (card.rect.contains(cursorVirtual))
+				{
+					m_hoverCardIndex = static_cast<size_t>(i);
+					break;
+				}
+			}
+		}
+	}
+
+	for (size_t i = 0; i < cards.size(); ++i)
+	{
+		auto& card = cards[i];
 		if (card.inTrash || (not card.inHand))
 		{
 			continue;
@@ -1017,7 +1106,12 @@ void CardSystem::updateCards()
 
 		if (not card.isDragging)
 		{
-			card.rect.pos = card.homePosition;
+			Vec2 pos = card.homePosition;
+			if (m_hoverCardIndex && (*m_hoverCardIndex == i))
+			{
+				pos.y -= m_hoverLift;
+			}
+			card.rect.pos = pos;
 		}
 	}
 }
@@ -1121,9 +1215,23 @@ void CardSystem::drawScene() const
 	Array<size_t> order;
 	order.reserve(m_handIndices.size());
 
+	Optional<size_t> hoverIndex;
+	if (m_hoverCardIndex && (*m_hoverCardIndex < cards.size()))
+	{
+		const auto& hovered = cards[*m_hoverCardIndex];
+		if (hovered.inHand && (not hovered.inTrash) && (not hovered.isDragging))
+		{
+			hoverIndex = m_hoverCardIndex;
+		}
+	}
+
 	for (const size_t index : m_handIndices)
 	{
 		if (cards[index].inTrash || (not cards[index].inHand))
+		{
+			continue;
+		}
+		if (hoverIndex && (*hoverIndex == index))
 		{
 			continue;
 		}
@@ -1131,6 +1239,11 @@ void CardSystem::drawScene() const
 		{
 			order << index;
 		}
+	}
+
+	if (hoverIndex)
+	{
+		order << *hoverIndex;
 	}
 
 	for (const size_t index : m_handIndices)
@@ -1152,6 +1265,12 @@ void CardSystem::drawScene() const
 			continue;
 		}
 		drawCard(cards[index]);
+
+		if (hoverIndex && (*hoverIndex == index))
+		{
+			const RectF highlight = cards[index].rect.stretched(-6);
+			highlight.drawFrame(4, 0, ColorF{ 0.95, 0.95, 1.0, 0.55 });
+		}
 	}
 }
 
@@ -1273,7 +1392,7 @@ void CardSystem::drawUI() const
 			const int32 maxFitColumns = (unitWidth > 0.0)
 				? static_cast<int32>((contentRect.w + spacing.x) / unitWidth)
 				: 1;
-			const int32 columns = Max<int32>(1, Min<int32>(4, maxFitColumns));
+			const int32 columns = Max<int32>(1, Min<int32>(5, maxFitColumns));
 			const double viewTop = contentRect.y;
 			const double viewBottom = viewTop + contentRect.h;
 
@@ -1353,7 +1472,7 @@ void CardSystem::drawUI() const
 			const int32 maxFitColumns = (unitWidth > 0.0)
 				? static_cast<int32>((contentRect.w + spacing.x) / unitWidth)
 				: 1;
-			const int32 columns = Max<int32>(1, Min<int32>(4, maxFitColumns));
+			const int32 columns = Max<int32>(1, Min<int32>(5, maxFitColumns));
 			const double viewTop = contentRect.y;
 			const double viewBottom = viewTop + contentRect.h;
 

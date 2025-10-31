@@ -32,6 +32,10 @@ public:
 	Optional<size_t> handCardAtScreenPos(const Vec2& screenPos) const;
 	const Array<size_t>& handOrder() const { return m_handIndices; }
 	const Array<size_t>& deckOrder() const { return m_drawPile; }
+	const RectF& deckButtonRect() const { return m_deckButtonScreen; }
+	bool isDeckViewOpen() const { return m_showDeck; }
+	bool isTrashViewOpen() const { return m_showTrash; }
+	bool isOverlayOpen() const { return m_showDeck || m_showTrash; }
 	const CardInstance* instanceAt(size_t deckIndex) const;
 	Array<String> sampleCardIds(size_t count) const;
 	bool addCardToDeck(const String& cardId);
@@ -110,6 +114,8 @@ private:
 	Array<size_t> m_drawPile;
 	Array<size_t> m_handIndices;
 	bool m_inputSuppressed = false;
+	Optional<size_t> m_hoverCardIndex;
+	double m_hoverLift = 34.0;
 	std::function<void(const String& cardId)> m_cardPlayCallback;
 	std::function<void()> m_endTurnCallback;
 	std::function<bool(const String& cardId)> m_cardPlayValidator;

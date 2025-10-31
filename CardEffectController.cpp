@@ -356,9 +356,37 @@ void CardEffectController::completeMovementSelection(const TargetOption& option)
 		return;
 	}
 
-	if (option.destination != m_player->gridPosition())
+	const Point originalPos = m_player->gridPosition();
+	if (option.destination != originalPos)
 	{
 		m_player->setGridPosition(option.destination, *m_mapSystem);
+	}
+
+	const bool ignoreDebuff = (m_stage && m_stage->m_ignoreTileDebuffsThisTurn);
+	if ((not ignoreDebuff) && m_mapSystem)
+	{
+		bool triggeredCamera = false;
+		for (const auto& tile : option.path)
+		{
+			if (m_mapSystem->isCameraWatchTile(tile))
+			{
+				triggeredCamera = true;
+				break;
+			}
+		}
+
+		if ((not triggeredCamera) && m_mapSystem->isCameraWatchTile(m_player->gridPosition()))
+		{
+			triggeredCamera = true;
+		}
+
+		if (triggeredCamera)
+		{
+			m_player->setGridPosition(originalPos, *m_mapSystem);
+			m_mapSystem->revealAround(originalPos);
+			clearTargeting();
+			return;
+		}
 	}
 
 	destroyBoxesAlong(option.path);

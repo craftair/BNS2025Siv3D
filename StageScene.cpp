@@ -33,6 +33,39 @@ StageScene::StageScene(const InitData& init, StageConfig config)
 		m_backgroundTexture = Texture{};
 	}
 
+	try
+	{
+		m_kanjiSlotTexture = Texture{ U"resources/texture/kanji/kanjislot.png", TextureDesc::Mipped };
+	}
+	catch (...)
+	{
+		m_kanjiSlotTexture = Texture{};
+	}
+
+	const Array<std::pair<String, String>> kanjiTexturePairs{
+		{ U"進", U"resources/texture/kanji/sin1.png" },
+		{ U"心", U"resources/texture/kanji/sin2.png" },
+		{ U"新", U"resources/texture/kanji/sin3.png" },
+		{ U"神", U"resources/texture/kanji/sin4.png" },
+		{ U"信", U"resources/texture/kanji/sin5.png" },
+		{ U"侵", U"resources/texture/kanji/sin6.png" }
+	};
+
+	for (const auto& [kanjiId, texturePath] : kanjiTexturePairs)
+	{
+		try
+		{
+			Texture texture{ texturePath, TextureDesc::Mipped };
+			if (texture)
+			{
+				m_kanjiTextures[kanjiId] = std::move(texture);
+			}
+		}
+		catch (...)
+		{
+		}
+	}
+
 	if (not m_mapSystem.loadFromJSON(mapPath, virtualSize))
 	{
 		throw Error{ U"Failed {}"_fmt(mapPath) };
@@ -245,8 +278,16 @@ void StageScene::draw() const
 
 	m_mapSystem.draw();
 	m_player.draw(m_mapSystem);
+	const bool overlayOpen = m_cardSystem.isOverlayOpen();
+	if (overlayOpen)
+	{
+		drawKanjiPanel();
+	}
 	m_cardSystem.draw();
-	drawKanjiPanel();
+	if (not overlayOpen)
+	{
+		drawKanjiPanel();
+	}
 	drawTreasureSelection();
 	if (not m_gameOver)
 	{
@@ -359,6 +400,14 @@ void StageScene::handleTileInteractions(const Point& previous, const Point& curr
 		if (m_ignoreTileDebuffsThisTurn)
 		{
 			m_mapSystem.removeObjectAt(current);
+			return;
+		}
+		m_player.setGridPosition(previous, m_mapSystem);
+		m_mapSystem.revealAround(m_player.gridPosition());
+		return;
+	case MapObjectType::CameraWatch:
+		if (m_ignoreTileDebuffsThisTurn)
+		{
 			return;
 		}
 		m_player.setGridPosition(previous, m_mapSystem);
@@ -850,45 +899,105 @@ void StageScene::unlockCardsForKanji(const KanjiInfo& info)
 
 void StageScene::drawKanjiPanel() const
 {
+	static const Array<String> orderedKanji{
+		U"進", U"心", U"新", U"神", U"信", U"侵"
+	};
+
 	const auto& data = getData();
-	if (data.kanjiOwned.empty())
+	const RectF deckRect = m_cardSystem.deckButtonRect();
+	if ((deckRect.w <= 0.0) || (deckRect.h <= 0.0))
 	{
 		return;
 	}
 
-	Array<String> kanjiList;
-	kanjiList.reserve(data.kanjiOwned.size());
-	for (const auto& kanji : data.kanjiOwned)
+	Array<String> ownedOrdered;
+	ownedOrdered.reserve(orderedKanji.size());
+	for (const auto& kanji : orderedKanji)
 	{
-		kanjiList << kanji;
-	}
-
-	std::sort(kanjiList.begin(), kanjiList.end());
-
-	String text = U"所持シン: ";
-	for (size_t i = 0; i < kanjiList.size(); ++i)
-	{
-		if (i > 0)
+		if (data.kanjiOwned.contains(kanji))
 		{
-			text += U" ";
+			ownedOrdered << kanji;
+			if (ownedOrdered.size() >= 3)
+			{
+				break;
+			}
 		}
-		text += kanjiList[i];
 	}
 
-	const Vec2 panelSize{ 240, 64 };
-	const Vec2 panelPos{ Scene::Width() - panelSize.x - 20, 20 };
-	RectF panel{ panelPos, panelSize };
-	panel.rounded(14).draw(ColorF{ 0.1, 0.12, 0.18, 0.85 });
-	panel.rounded(14).drawFrame(2, 0, ColorF{ 0.45, 0.55, 0.95, 0.35 });
-
-	const Vec2 textPos = panelPos + Vec2{ 18, 22 };
-	if (FontAsset::IsRegistered(U"MisakiFont"))
+	const size_t slotCount = 3;
+	if (slotCount == 0)
 	{
-		FontAsset(U"MisakiFont")(text).draw(textPos, ColorF{ 0.96 });
+		return;
 	}
-	else
+
+	Vec2 slotSize{ 108, 108 };
+	if (m_kanjiSlotTexture)
 	{
-		m_clearCountFont(text).draw(textPos, ColorF{ 0.96 });
+		const Vec2 nativeSize = Vec2{ m_kanjiSlotTexture.size() };
+		if ((nativeSize.x > 0.0) && (nativeSize.y > 0.0))
+		{
+			const double scale = Min(1.0, 112.0 / nativeSize.x);
+			slotSize = nativeSize * scale;
+		}
+	}
+
+	const double spacing = slotSize.x * 0.18;
+	const double totalWidth = slotSize.x * slotCount + spacing * (slotCount - 1);
+	const double gapFromDeck = 18.0;
+	const double unclampedX = deckRect.center().x - totalWidth * 0.5;
+	const double baseY = deckRect.y - slotSize.y - gapFromDeck;
+	const double clampedX = Clamp(unclampedX, 20.0, Scene::Width() - totalWidth - 20.0);
+	const double clampedY = Max(16.0, baseY);
+	const Vec2 basePos{ clampedX, clampedY };
+
+	for (size_t i = 0; i < slotCount; ++i)
+	{
+		const Vec2 slotPos = basePos + Vec2{ (slotSize.x + spacing) * i, 0.0 };
+		const RectF slotRect{ slotPos, slotSize };
+
+		if (m_kanjiSlotTexture)
+		{
+			m_kanjiSlotTexture.resized(slotRect.size).draw(slotRect.pos);
+		}
+		else
+		{
+			slotRect.rounded(14).draw(ColorF{ 0.12, 0.16, 0.22, 0.85 });
+			slotRect.rounded(14).drawFrame(2, 0, ColorF{ 0.5, 0.6, 0.8, 0.35 });
+		}
+
+		if (i >= ownedOrdered.size())
+		{
+			continue;
+		}
+
+		const String& kanji = ownedOrdered[i];
+		const auto it = m_kanjiTextures.find(kanji);
+		if (it != m_kanjiTextures.end())
+		{
+			const Texture& kanjiTexture = it->second;
+			Vec2 textureSize = Vec2{ kanjiTexture.size() };
+			if ((textureSize.x <= 0.0) || (textureSize.y <= 0.0))
+			{
+				continue;
+			}
+
+			Vec2 drawSize = textureSize;
+			const double maxWidth = slotRect.w * 0.78;
+			const double maxHeight = slotRect.h * 0.78;
+			const double scale = Min(maxWidth / drawSize.x, maxHeight / drawSize.y);
+			if (scale < 1.0)
+			{
+				drawSize *= scale;
+			}
+
+			const Vec2 drawPos = slotRect.center() - drawSize * 0.5;
+			kanjiTexture.resized(drawSize).draw(drawPos);
+		}
+		else
+		{
+			const Font font = FontAsset::IsRegistered(U"MisakiFont") ? FontAsset(U"MisakiFont") : m_clearCountFont;
+			font(kanji).drawAt(slotRect.center(), ColorF{ 0.95 });
+		}
 	}
 }
 
