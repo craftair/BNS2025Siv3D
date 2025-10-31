@@ -1,15 +1,9 @@
-﻿#pragma once
-#include "Common.h"
-#include "MapSystem.h"
+#pragma once
+#include "StageScene.h"
 
-class Stage2 : public App::Scene
+class Stage2 : public StageScene
 {
 public:
-	Stage2(const InitData& init);
-	void update() override;
-	void draw() const override;
-
-private:
-	MapSystem m_mapSystem;
+	explicit Stage2(const InitData& init);
 };
 

@@ -19,6 +19,10 @@ struct GameData
 	bool showSettings = false;
 	double bgmVolume = 1.0;
 	double seVolume = 1.0;
+	int32 totalActions = 0;
+	HashSet<String> kanjiOwned = { U"進" };
+	HashSet<int32> kanjiRewardStagesClaimed;
+	HashSet<String> unlockedCards;
 };
 
 using App = SceneManager<State, GameData>;

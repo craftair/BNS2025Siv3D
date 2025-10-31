@@ -1,0 +1,63 @@
+﻿{
+    "background":  "resources/texture/field/background.png",
+    "tile":  {
+                 "size":  [64,64],
+                 "texture":  "resources/texture/field/mapsquare.png"
+             },
+    "origin":  [520,180],
+    "tiles":  [
+                  [1,1,1,1,1,0,0],
+                  [1,1,0,0,1,1,1],
+                  [1,1,1,1,1,0,0]
+              ],
+    "objectDefinitions":[
+                            {
+                                "texture":"resources/texture/field/box.png",
+                                "id":1
+                            },
+                            {
+                                "texture":"resources/texture/field/treasurebox.png",
+                                "id":2
+                            },
+                            {
+                                "texture":"resources/texture/field/rock.png",
+                                "id":3
+                            },
+                            {
+                                "texture":"resources/texture/field/fieldglass.png",
+                                "id":4
+                            },
+                            {
+                                "texture":"resources/texture/field/heal.png",
+                                "id":5
+                            },
+                            {
+                                "texture":"resources/texture/field/camera.png",
+                                "id":6
+                            },
+                            {
+                                "texture":"resources/texture/field/pillar.png",
+                                "id":7
+                            }
+                        ],
+    "objectPlacements":  [
+                             {
+                                 "id":  1,
+                                 "position":  [
+                                                  1,
+                                                  0
+                                              ]
+                             },
+                             {
+                                 "id":  2,
+                                 "position":  [
+                                                  4,
+                                                  2
+                                              ]
+                             },
+                             {
+                                "id":   7,
+                                "position": [6,1] 
+                             }
+                         ]
+}

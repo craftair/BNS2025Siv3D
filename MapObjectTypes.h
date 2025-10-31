@@ -11,6 +11,7 @@ enum class MapObjectType : int32
 	Heal = 5,
 	Camera = 6,
 	Pillar = 7,
+	CameraWatch = 8,
 };
 
 inline MapObjectType ToMapObjectType(const int32 id)

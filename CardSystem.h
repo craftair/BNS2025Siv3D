@@ -21,10 +21,28 @@ public:
 	const Array<String>& playLog() const { return m_playLog; }
 	void setCardPlayCallback(std::function<void(const String& cardId)> callback) { m_cardPlayCallback = callback; }
 	void setEndTurnCallback(std::function<void()> callback) { m_endTurnCallback = callback; }
+	void setCardValidationCallback(std::function<bool(const String& cardId)> callback) { m_cardPlayValidator = callback; }
+	void setInputSuppressed(bool suppressed);
+	bool inputSuppressed() const { return m_inputSuppressed; }
+	size_t drawCards(size_t count);
+	bool discardCardInHand(size_t deckIndex);
+	size_t discardHand();
+	void shuffleAllAndDraw(size_t drawCount);
+	bool addDeckCardToHand(size_t deckIndex);
+	Optional<size_t> handCardAtScreenPos(const Vec2& screenPos) const;
+	const Array<size_t>& handOrder() const { return m_handIndices; }
+	const Array<size_t>& deckOrder() const { return m_drawPile; }
+	const RectF& deckButtonRect() const { return m_deckButtonScreen; }
+	bool isDeckViewOpen() const { return m_showDeck; }
+	bool isTrashViewOpen() const { return m_showTrash; }
+	bool isOverlayOpen() const { return m_showDeck || m_showTrash; }
+	const CardInstance* instanceAt(size_t deckIndex) const;
 	Array<String> sampleCardIds(size_t count) const;
 	bool addCardToDeck(const String& cardId);
+	bool removeCardFromDeck(const String& cardId, size_t count = 1);
 	const Texture* textureForCard(const String& cardId) const;
 	const CardDefinition* findCardDefinition(const String& cardId) const;
+	Array<String> allCardIds() const;
 
 private:
 	void loadTextures();
@@ -57,6 +75,9 @@ private:
 	Array<String> m_playLog;
 	HashTable<String, Texture> m_textures;
 	Font m_bodyFont{ 18 };
+	Texture m_deckButtonTexture;
+	Texture m_trashButtonTexture;
+	Texture m_endTurnTexture;
 
 	Array<size_t> m_trashOrder;
 	bool m_showTrash = false;
@@ -74,8 +95,28 @@ private:
 	RectF m_deckCloseButton{ 0, 0, 0, 0 };
 	double m_trashScroll = 0.0;
 	double m_deckScroll = 0.0;
+	double m_trashScrollMax = 0.0;
+	double m_deckScrollMax = 0.0;
+	RectF m_trashContentRect{ 0, 0, 0, 0 };
+	RectF m_deckContentRect{ 0, 0, 0, 0 };
+	RectF m_trashScrollbarTrack{ 0, 0, 0, 0 };
+	RectF m_deckScrollbarTrack{ 0, 0, 0, 0 };
+	RectF m_trashScrollbarThumb{ 0, 0, 0, 0 };
+	RectF m_deckScrollbarThumb{ 0, 0, 0, 0 };
+	RectF m_trashScrollUpButton{ 0, 0, 0, 0 };
+	RectF m_trashScrollDownButton{ 0, 0, 0, 0 };
+	RectF m_deckScrollUpButton{ 0, 0, 0, 0 };
+	RectF m_deckScrollDownButton{ 0, 0, 0, 0 };
+	bool m_trashScrollbarDragging = false;
+	bool m_deckScrollbarDragging = false;
+	double m_trashScrollbarGrabOffset = 0.0;
+	double m_deckScrollbarGrabOffset = 0.0;
 	Array<size_t> m_drawPile;
 	Array<size_t> m_handIndices;
+	bool m_inputSuppressed = false;
+	Optional<size_t> m_hoverCardIndex;
+	double m_hoverLift = 34.0;
 	std::function<void(const String& cardId)> m_cardPlayCallback;
 	std::function<void()> m_endTurnCallback;
+	std::function<bool(const String& cardId)> m_cardPlayValidator;
 };

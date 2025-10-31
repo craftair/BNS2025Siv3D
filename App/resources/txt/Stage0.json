@@ -1,0 +1,61 @@
+{
+    "background": "resources/texture/field/background.png",
+    "tile": {
+        "size": [64,64],
+        "texture": "resources/texture/field/mapsquare.png"
+    },
+    "origin": [100,100],
+    "tiles": [
+        [1,1,1,1,1,1],
+        [1,1,1,1,1,1],
+        [1,1,1,1,1,1],
+        [1,1,1,1,1,1]
+    ],
+    "objectDefinitions": [
+        {
+            "texture": "resources/texture/field/box.png",
+            "id": 1
+        },
+        {
+            "texture": "resources/texture/field/treasurebox.png",
+            "id": 2
+        },
+        {
+            "texture": "resources/texture/field/heal.png",
+            "id": 5
+        },
+        {
+            "texture": "resources/texture/field/camera.png",
+            "id": 6
+        },
+        {
+            "texture": "resources/texture/field/pillar.png",
+            "id": 7
+        }
+    ],
+    "objectPlacements": [
+        {
+            "id": 5,
+            "position": [2,1]
+        },
+        {
+            "id": 1,
+            "position": [3,1]
+        },
+        {
+            "id": 2,
+            "position": [4,2]
+        },
+        {
+            "id": 6,
+            "position": [1,2],
+            "watchTiles": [
+                [1,1]
+            ]
+        },
+        {
+            "id": 7,
+            "position": [5,3]
+        }
+    ]
+}

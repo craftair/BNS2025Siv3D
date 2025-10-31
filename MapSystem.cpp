@@ -127,7 +127,7 @@ bool MapSystem::loadFromJSON(const FilePathView& path, const Vec2& virtualSize)
 	// Try to load a default fog texture used to cover unrevealed tiles.
 	try
 	{
-		m_fogTexture = Texture{ U"field/Box2.png", TextureDesc::Mipped };
+		m_fogTexture = Texture{ U"resources/texture/field/Box2.png", TextureDesc::Mipped };
 	}
 	catch (...)
 	{
@@ -171,6 +171,7 @@ bool MapSystem::loadFromJSON(const FilePathView& path, const Vec2& virtualSize)
 	}
 
 	m_objectPlacements.clear();
+	clearCameraWatchData();
 	JSON placementsNode;
 	try
 	{
@@ -207,6 +208,25 @@ bool MapSystem::loadFromJSON(const FilePathView& path, const Vec2& virtualSize)
 				if ((x >= 0) && (x < static_cast<int32>(row.size())))
 				{
 					row[x] = id;
+				}
+			}
+
+			if (ToMapObjectType(id) == MapObjectType::Camera)
+			{
+				const JSON watchTilesNode = placementValue[U"watchTiles"];
+				if (watchTilesNode && watchTilesNode.isArray())
+				{
+					for (const auto& watchValue : watchTilesNode.arrayView())
+					{
+						if ((not watchValue.isArray()) || (watchValue.size() < 2))
+						{
+							continue;
+						}
+
+						const int32 watchX = watchValue[0].getOr<int32>(0);
+						const int32 watchY = watchValue[1].getOr<int32>(0);
+						registerCameraWatchTile(gridPos, Point{ watchX, watchY });
+					}
 				}
 			}
 		}
@@ -277,16 +297,46 @@ void MapSystem::draw() const
 		}
 
 		const RectF rect{ gridToWorld(placement.gridPos), m_tileSize };
-		const Vec2 inset = m_tileSize * 0.18;
+		const MapObjectType type = ToMapObjectType(placement.id);
+		const Vec2 inset = (type == MapObjectType::CameraWatch) ? Vec2{ 0, 0 } : (m_tileSize * 0.18);
 		const RectF objectRect = RectF{ rect.pos + inset, rect.size - inset * 2.0 };
-		if (const auto it = m_objectTextures.find(placement.id); it != m_objectTextures.end())
+		const auto textureIt = m_objectTextures.find(placement.id);
+
+		if (textureIt != m_objectTextures.end())
 		{
-			it->second.resized(objectRect.size).draw(objectRect.pos);
+			if (type == MapObjectType::CameraWatch)
+			{
+				const ColorF tint{ 1.0, 1.0, 1.0, 0.55 };
+				textureIt->second.resized(rect.size).draw(rect.pos, tint);
+			}
+			else
+			{
+				textureIt->second.resized(objectRect.size).draw(objectRect.pos);
+			}
 		}
 		else
 		{
-			objectRect.draw(ColorF{ 0.9, 0.2, 0.2, 0.8 });
+			if (type == MapObjectType::CameraWatch)
+			{
+				rect.draw(ColorF{ 0.3, 0.45, 0.8, 0.4 });
+			}
+			else
+			{
+				objectRect.draw(ColorF{ 0.9, 0.2, 0.2, 0.8 });
+			}
 		}
+	}
+}
+
+void MapSystem::setTileTexture(const FilePathView& path)
+{
+	try
+	{
+		m_tileTexture = Texture{ path, TextureDesc::Mipped };
+	}
+	catch (...)
+	{
+		m_tileTexture = Texture{};
 	}
 }
 
@@ -427,6 +477,174 @@ void MapSystem::revealRadius(const Point& gridPos, int32 radius)
 	}
 }
 
+bool MapSystem::isCameraWatchTile(const Point& gridPos) const
+{
+	return m_watchTileOwners.contains(gridPos);
+}
+
+Optional<Point> MapSystem::cameraForWatchTile(const Point& gridPos) const
+{
+	if (const auto it = m_watchTileOwners.find(gridPos); it != m_watchTileOwners.end())
+	{
+		return it->second;
+	}
+
+	return none;
+}
+
+void MapSystem::clearCameraWatchData()
+{
+	m_cameraWatchTiles.clear();
+	m_watchTileOwners.clear();
+	m_cameraWatchTexture = Texture{};
+	m_objectTextures.erase(static_cast<int32>(MapObjectType::CameraWatch));
+}
+
+void MapSystem::ensureCameraWatchTexture()
+{
+	const int32 watchId = static_cast<int32>(MapObjectType::CameraWatch);
+	if (m_objectTextures.contains(watchId))
+	{
+		return;
+	}
+
+	if (not m_cameraWatchTexture)
+	{
+		try
+		{
+			m_cameraWatchTexture = Texture{ U"resources/texture/field/Box3.png", TextureDesc::Mipped };
+		}
+		catch (...)
+		{
+			m_cameraWatchTexture = Texture{};
+		}
+	}
+
+	if (m_cameraWatchTexture)
+	{
+		m_objectTextures[watchId] = m_cameraWatchTexture;
+	}
+}
+
+void MapSystem::registerCameraWatchTile(const Point& cameraPos, const Point& watchPos)
+{
+	if ((watchPos.y < 0) || (watchPos.y >= static_cast<int32>(m_objectGrid.size())))
+	{
+		return;
+	}
+
+	auto& row = m_objectGrid[watchPos.y];
+	if ((watchPos.x < 0) || (watchPos.x >= static_cast<int32>(row.size())))
+	{
+		return;
+	}
+
+	const int32 watchId = static_cast<int32>(MapObjectType::CameraWatch);
+	if ((row[watchPos.x] != 0) && (row[watchPos.x] != watchId))
+	{
+		return;
+	}
+
+	if (m_watchTileOwners.contains(watchPos))
+	{
+		return;
+	}
+
+	auto& watchList = m_cameraWatchTiles[cameraPos];
+	if (watchList.contains(watchPos))
+	{
+		return;
+	}
+
+	ensureCameraWatchTexture();
+	row[watchPos.x] = watchId;
+	m_objectPlacements << ObjectPlacement{ watchId, watchPos };
+	watchList << watchPos;
+	m_watchTileOwners[watchPos] = cameraPos;
+}
+
+void MapSystem::removeCameraWatchTile(const Point& watchPos)
+{
+	const int32 watchId = static_cast<int32>(MapObjectType::CameraWatch);
+	if ((watchPos.y >= 0) && (watchPos.y < static_cast<int32>(m_objectGrid.size())))
+	{
+		auto& row = m_objectGrid[watchPos.y];
+		if ((watchPos.x >= 0) && (watchPos.x < static_cast<int32>(row.size())))
+		{
+			if (row[watchPos.x] == watchId)
+			{
+				row[watchPos.x] = 0;
+			}
+		}
+	}
+
+	m_objectPlacements.remove_if([&](const ObjectPlacement& placement)
+	{
+		return (placement.gridPos == watchPos) && (placement.id == watchId);
+	});
+
+	if (const auto owner = cameraForWatchTile(watchPos))
+	{
+		if (auto it = m_cameraWatchTiles.find(*owner); it != m_cameraWatchTiles.end())
+		{
+			it->second.remove_if([&](const Point& value)
+			{
+				return value == watchPos;
+			});
+			if (it->second.isEmpty())
+			{
+				m_cameraWatchTiles.erase(*owner);
+			}
+		}
+	}
+
+	m_watchTileOwners.erase(watchPos);
+}
+
+void MapSystem::removeCameraWatchTiles(const Point& cameraPos)
+{
+	const auto it = m_cameraWatchTiles.find(cameraPos);
+	if (it == m_cameraWatchTiles.end())
+	{
+		return;
+	}
+
+	const Array<Point> watchCopy = it->second;
+	for (const auto& watchPos : watchCopy)
+	{
+		removeCameraWatchTile(watchPos);
+	}
+	m_cameraWatchTiles.erase(cameraPos);
+}
+
+Array<Array<bool>> MapSystem::visibilitySnapshot() const
+{
+	return m_tileVisibility;
+}
+
+void MapSystem::applyVisibility(const Array<Array<bool>>& visibility)
+{
+	if (visibility.size() != m_tileVisibility.size())
+	{
+		return;
+	}
+
+	for (size_t y = 0; y < visibility.size(); ++y)
+	{
+		if (visibility[y].size() != m_tileVisibility[y].size())
+		{
+			return;
+		}
+	}
+
+	m_tileVisibility = visibility;
+}
+
+void MapSystem::revealAll()
+{
+	setAllVisible(true);
+}
+
 int32 MapSystem::tileValue(const Point& gridPos) const
 {
 	if (not isInBounds(gridPos))
@@ -497,11 +715,30 @@ void MapSystem::removeObjectAt(const Point& gridPos)
 		return;
 	}
 
+	const int32 objectId = row[gridPos.x];
+	if (objectId == 0)
+	{
+		return;
+	}
+
+	const MapObjectType type = ToMapObjectType(objectId);
+	if (type == MapObjectType::CameraWatch)
+	{
+		removeCameraWatchTile(gridPos);
+		return;
+	}
+
 	row[gridPos.x] = 0;
 	m_objectPlacements.remove_if([&](const ObjectPlacement& placement)
 	{
 		return placement.gridPos == gridPos;
 	});
+
+	if (type == MapObjectType::Camera)
+	{
+		removeCameraWatchTiles(gridPos);
+	}
 }
+
 
 

@@ -1,11 +1,9 @@
-﻿#pragma once
-#include "Common.h"
+#pragma once
+#include "StageScene.h"
 
-class Stage3 : public App::Scene
+class Stage3 : public StageScene
 {
 public:
-	Stage3(const InitData& init);
-	void update() override;
-	void draw() const override;
+	explicit Stage3(const InitData& init);
 };
 

@@ -1,0 +1,130 @@
+﻿{
+  "cards": [
+    {
+      "id": "zen",
+      "name": "zen",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_zen.png"
+    },
+    {
+      "id": "choku",
+      "name": "choku",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_choku.png"
+    },
+    {
+      "id": "ka",
+      "name": "ka",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_ka.png"
+    },
+    {
+      "id": "ha",
+      "name": "ha",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_ha.png"
+    },
+    {
+      "id": "kyuu",
+      "name": "kyuu",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_kyuu.png"
+    },
+    {
+      "id": "you",
+      "name": "you",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_you.png"
+    },
+    {
+      "id": "ann",
+      "name": "ann",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_ann.png"
+    },
+    {
+      "id": "ke",
+      "name": "ke",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_ke.png"
+    },
+    {
+      "id": "dou",
+      "name": "dou",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_dou.png"
+    },
+    {
+      "id": "pin",
+      "name": "pin",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_pin.png"
+    },
+    {
+      "id": "yaku",
+      "name": "yaku",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_yaku.png"
+    },
+    {
+      "id": "dou2",
+      "name": "dou2",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_dou2.png"
+    },
+    {
+      "id": "pin2",
+      "name": "pin2",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_pin2.png"
+    },
+    {
+      "id": "soku",
+      "name": "soku",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_soku.png"
+    },
+    {
+      "id": "kou",
+      "name": "kou",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_kou.png"
+    },
+    {
+      "id": "kan",
+      "name": "kan",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_kan.png"
+    },
+    {
+      "id": "ha2",
+      "name": "ha2",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_ha2.png"
+    },
+    {
+      "id": "kou2",
+      "name": "kou2",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_kou2.png"
+    },
+    {
+      "id": "ryaku",
+      "name": "ryaku",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_ryaku.png"
+    },
+    {
+      "id": "nyuu",
+      "name": "nyuu",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_nyuu.png"
+    },
+    {
+      "id": "kou3",
+      "name": "kou3",
+      "size": [160, 220],
+      "image": "resources/texture/cards/card_kou3.png"
+    }
+  ]
+}
