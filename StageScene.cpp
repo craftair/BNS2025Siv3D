@@ -928,9 +928,22 @@ void StageScene::drawKanjiPanel() const
 
 	Array<String> ownedOrdered;
 	ownedOrdered.reserve(orderedKanji.size());
+	const String shinKanji = U"新";
+	const String kamiKanji = U"神";
 	for (const auto& kanji : orderedKanji)
 	{
-		if (data.kanjiOwned.contains(kanji))
+		const bool possessed = data.kanjiOwned.contains(kanji);
+		if ((kanji == shinKanji) && m_promoteShinToKami && data.kanjiOwned.contains(shinKanji))
+		{
+			ownedOrdered << kamiKanji;
+			if (ownedOrdered.size() >= 3)
+			{
+				break;
+			}
+			continue;
+		}
+
+		if (possessed)
 		{
 			ownedOrdered << kanji;
 			if (ownedOrdered.size() >= 3)

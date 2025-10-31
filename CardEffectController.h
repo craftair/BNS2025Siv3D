@@ -110,6 +110,6 @@ private:
 	Optional<size_t> m_hoverTarget;
 	EffectState m_state = EffectState::None;
 	Array<String> m_pendingCardEffects;
-	bool m_canBreakBoxesThisTurn = false;
+	int32 m_boxBreakCharges = 0;
 	size_t m_nextCardRepeats = 0;
 };

@@ -136,7 +136,7 @@ void CardEffectController::onCardPlayed(const String& cardId)
 void CardEffectController::clearAllEffects()
 {
 	m_pendingCardEffects.clear();
-	m_canBreakBoxesThisTurn = false;
+	m_boxBreakCharges = 0;
 	m_nextCardRepeats = 0;
 	m_deckSelectionType = DeckSelectionType::None;
 	m_deckSelectionIndices.clear();
@@ -158,7 +158,7 @@ bool CardEffectController::applyImmediateEffect(const String& cardId)
 {
 	if (cardId == U"ka")
 	{
-		m_canBreakBoxesThisTurn = true;
+		++m_boxBreakCharges;
 		return true;
 	}
 
@@ -408,6 +408,10 @@ void CardEffectController::completeMovementSelection(const TargetOption& option)
 	}
 
 	destroyBoxesAlong(option.path);
+	if (m_boxBreakCharges > 0)
+	{
+		--m_boxBreakCharges;
+	}
 	revealPath(option.path);
 	m_mapSystem->revealAround(m_player->gridPosition());
 	clearTargeting();
@@ -1370,12 +1374,12 @@ bool CardEffectController::canTraverse(const Point& gridPos) const
 		return true;
 	}
 
-	return (m_canBreakBoxesThisTurn && isBox(gridPos));
+	return ((m_boxBreakCharges > 0) && isBox(gridPos));
 }
 
 void CardEffectController::destroyBoxesAlong(const Array<Point>& path)
 {
-	if ((not m_mapSystem) || (not m_canBreakBoxesThisTurn))
+	if ((not m_mapSystem) || (m_boxBreakCharges <= 0))
 	{
 		return;
 	}
