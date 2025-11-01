@@ -17,7 +17,7 @@ struct StageConfig
 class StageScene : public App::Scene
 {
 public:
-	StageScene(const InitData& init, StageConfig config);
+	StageScene(const InitData& init, StageConfig config, GameData gameData);
 	void update() override;
 	void draw() const override;
 

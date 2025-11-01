@@ -1,5 +1,6 @@
 ﻿#include "CardSystem.h"
 #include <algorithm>
+
 namespace
 {
 	constexpr double TrashPaddingLeft = 24.0;
@@ -11,6 +12,12 @@ namespace
 	constexpr size_t DeckCopiesPerCard = 2;
 	constexpr size_t InitialHandSize = 4;
 	constexpr double OverlayMargin = 96.0;
+}
+
+CardSystem::CardSystem(GameData gameData)
+	: m_gameData(gameData)
+{
+
 }
 
 bool CardSystem::initialize(const FilePathView& libraryPath, const Array<String>& deckIds, const CardHandConfig& config)
@@ -1070,13 +1077,15 @@ void CardSystem::updateCards()
 
 	updateDragging(cursorVirtual);
 
+	const Optional<size_t> oldHoverIndex = m_hoverCardIndex;
+
 	if (m_draggingIndex)
 	{
 		m_hoverCardIndex.reset();
 	}
 	else
 	{
-		m_hoverCardIndex.reset();
+		Optional<size_t> newHoverIndex;
 		if (isInsideVirtual(cursorVirtual))
 		{
 			for (int32 i = static_cast<int32>(cards.size()) - 1; i >= 0; --i)
@@ -1089,11 +1098,17 @@ void CardSystem::updateCards()
 
 				if (card.rect.contains(cursorVirtual))
 				{
-					m_hoverCardIndex = static_cast<size_t>(i);
+					newHoverIndex = static_cast<size_t>(i);
 					break;
 				}
 			}
 		}
+		m_hoverCardIndex = newHoverIndex;
+	}
+
+	if (m_hoverCardIndex && (oldHoverIndex != m_hoverCardIndex))
+	{
+		seCursor1.playOneShot(m_gameData.seVolume);
 	}
 
 	for (size_t i = 0; i < cards.size(); ++i)

@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "CardData.h"
 #include <functional>
+#include "Common.h"
 
 struct CardHandConfig
 {
@@ -14,6 +15,7 @@ struct CardHandConfig
 class CardSystem
 {
 public:
+	CardSystem(GameData gameData);
 	bool initialize(const FilePathView& libraryPath, const Array<String>& deckIds, const CardHandConfig& config = {});
 	void update();
 	void draw() const;
@@ -119,4 +121,7 @@ private:
 	std::function<void(const String& cardId)> m_cardPlayCallback;
 	std::function<void()> m_endTurnCallback;
 	std::function<bool(const String& cardId)> m_cardPlayValidator;
+
+	GameData m_gameData;
+	Audio seCursor1{ U"resources/audio/cursor1.ogg" };
 };
