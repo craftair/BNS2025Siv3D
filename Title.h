@@ -17,4 +17,10 @@ private:
 	RectF m_titleCg{ 0, 0, 1280, 720 };
 	RectF m_startBtn{ 462, 393, 356, 88 };
 	RectF m_optionBtn{ 436, 513, 408, 88 };
+	bool startBtnEntered = false;
+	bool optionBtnEntered = false;
+
+	const Audio seCursor1{ U"resources/audio/cursor1.ogg" };
+	const Audio seStart1{ U"resources/audio/start1.ogg" };
+	const Audio seSelect1{ U"resources/audio/select1.ogg" };
 };

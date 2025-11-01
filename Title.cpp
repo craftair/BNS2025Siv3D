@@ -12,8 +12,14 @@ void Title::update()
 
 	if (m_startBtn.mouseOver())
 	{
+		if (!startBtnEntered)
+		{
+			seCursor1.playOneShot(getData().seVolume);
+			startBtnEntered = true;
+		}
 		if (m_startBtn.leftClicked())
 		{
+			seStart1.playOneShot(getData().seVolume);
 			changeScene(State::Monolog);
 		}
 		else
@@ -23,13 +29,20 @@ void Title::update()
 	}
 	else
 	{
+		startBtnEntered = false;
 		m_startBtn(texture2(0, 0, 534, 132)).draw();
 	}
 
 	if (m_optionBtn.mouseOver())
 	{
+		if (!optionBtnEntered)
+		{
+			seCursor1.playOneShot(getData().seVolume);
+			optionBtnEntered = true;
+		}
 		if (m_optionBtn.leftClicked())
 		{
+			seSelect1.playOneShot(getData().seVolume);
 			getData().showSettings = !getData().showSettings;
 		}
 		else
@@ -39,6 +52,7 @@ void Title::update()
 	}
 	else
 	{
+		optionBtnEntered = false;
 		m_optionBtn(texture4(0, 0, 612, 132)).draw();
 	}
 
