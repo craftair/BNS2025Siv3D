@@ -31,6 +31,13 @@ void Monolog::update()
 			changeScene(State::Stage1);
 		}
 	}
+
+	if (m_optionIcon.leftPressed())
+	{
+		MouseL.clearInput();
+		seSelect1.playOneShot(getData().seVolume);
+		getData().showSettings = !getData().showSettings;
+	}
 }
 
 void Monolog::draw() const
@@ -57,6 +64,8 @@ void Monolog::draw() const
 	{
 		Triangle{ m_serifWindow.br().movedBy(-48, -42), 20, 180_deg }.draw(ColorF{ 0.0, Periodic::Sine0_1(2.0s) });
 	}
+
+	m_optionIcon(texture3(0, 0, 48, 48)).draw();
 }
 
 bool Monolog::isFinished() const

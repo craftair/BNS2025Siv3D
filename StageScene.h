@@ -101,4 +101,7 @@ private:
 
 	Audio seExplosion1{ U"resources/audio/explosion1.ogg" };
 	Audio seSelect1{ U"resources/audio/select1.ogg" };
+
+	const Texture texture1{ U"resources/texture/option-icon.png" };
+	RectF m_optionIcon{ 1184, 48, 48, 48 };
 };

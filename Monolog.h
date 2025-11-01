@@ -23,4 +23,8 @@ private:
 	Array<Message> m_messages;
 	int message_index = 0;
 	Stopwatch stopwatch;
+
+	Audio seSelect1{ U"resources/audio/select1.ogg" };
+	const Texture texture3{ U"resources/texture/option-icon.png" };
+	RectF m_optionIcon{ 1184, 48, 48, 48 };
 };
