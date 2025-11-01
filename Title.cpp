@@ -8,6 +8,40 @@ Title::Title(const InitData& init)
 
 void Title::update()
 {
+	m_titleCg(texture1(0, 0, 1920, 1080)).draw();
+
+	if (m_startBtn.mouseOver())
+	{
+		if (m_startBtn.leftClicked())
+		{
+			changeScene(State::Monolog);
+		}
+		else
+		{
+			m_startBtn(texture3(0, 0, 534, 132)).draw();
+		}
+	}
+	else
+	{
+		m_startBtn(texture2(0, 0, 534, 132)).draw();
+	}
+
+	if (m_optionBtn.mouseOver())
+	{
+		if (m_optionBtn.leftClicked())
+		{
+			getData().showSettings = !getData().showSettings;
+		}
+		else
+		{
+			m_optionBtn(texture5(0, 0, 612, 132)).draw();
+		}
+	}
+	else
+	{
+		m_optionBtn(texture4(0, 0, 612, 132)).draw();
+	}
+
 	if (SimpleGUI::Button(U"Monologへ", Vec2{ 240, 40 }, 180))
 	{
 		changeScene(State::Monolog);
@@ -25,4 +59,6 @@ void Title::update()
 void Title::draw() const
 {
 	Scene::SetBackground(ColorF{ 0.1, 0.12, 0.18 });
+
+	//m_titleCg(texture1(0, 0, 1920, 1080)).draw();
 }
