@@ -177,6 +177,7 @@ bool CardEffectController::applyImmediateEffect(const String& cardId)
 		{
 			m_stage->activateFullMapVision();
 		}
+		removeCardForStage(cardId);
 		return true;
 	}
 
@@ -195,6 +196,7 @@ bool CardEffectController::applyImmediateEffect(const String& cardId)
 		{
 			m_stage->healActionsToFull();
 		}
+		removeCardForStage(cardId);
 		return true;
 	}
 
@@ -214,6 +216,7 @@ bool CardEffectController::applyImmediateEffect(const String& cardId)
 			m_cardSystem->discardHand();
 			m_cardSystem->drawCards(4);
 		}
+		removeCardForStage(cardId);
 		return true;
 	}
 
@@ -269,10 +272,21 @@ bool CardEffectController::applyImmediateEffect(const String& cardId)
 		{
 			m_stage->activateYakuEffect();
 		}
+		removeCardForStage(cardId);
 		return true;
 	}
 
 	return false;
+}
+
+void CardEffectController::removeCardForStage(const String& cardId)
+{
+	if (not m_cardSystem)
+	{
+		return;
+	}
+
+	m_cardSystem->removeCardFromDeck(cardId);
 }
 
 void CardEffectController::enqueueTargetedEffect(const String& cardId)
@@ -375,36 +389,69 @@ void CardEffectController::completeMovementSelection(const TargetOption& option)
 	}
 
 	const Point originalPos = m_player->gridPosition();
-	if (option.destination != originalPos)
-	{
-		m_player->setGridPosition(option.destination, *m_mapSystem);
-	}
-
 	const bool ignoreDebuff = (m_stage && m_stage->m_ignoreTileDebuffsThisTurn);
+	Optional<size_t> watchIndex;
 	if ((not ignoreDebuff) && m_mapSystem)
 	{
-		bool triggeredCamera = false;
-		for (const auto& tile : option.path)
+		for (size_t i = 0; i < option.path.size(); ++i)
 		{
-			if (m_mapSystem->isCameraWatchTile(tile))
+			if (m_mapSystem->isCameraWatchTile(option.path[i]))
 			{
-				triggeredCamera = true;
+				watchIndex = i;
 				break;
 			}
 		}
+	}
 
-		if ((not triggeredCamera) && m_mapSystem->isCameraWatchTile(m_player->gridPosition()))
+	Optional<Point> watchTile;
+	if (watchIndex)
+	{
+		watchTile = option.path[*watchIndex];
+	}
+	else if ((not ignoreDebuff) && m_mapSystem && (option.destination != originalPos) && m_mapSystem->isCameraWatchTile(option.destination))
+	{
+		watchTile = option.destination;
+	}
+
+	if (watchTile)
+	{
+		Array<Point> travelledPath;
+		if (watchIndex)
 		{
-			triggeredCamera = true;
+			travelledPath.reserve(*watchIndex + 1);
+			for (size_t i = 0; i <= *watchIndex; ++i)
+			{
+				travelledPath << option.path[i];
+			}
+		}
+		else
+		{
+			travelledPath << *watchTile;
 		}
 
-		if (triggeredCamera)
+		if (not travelledPath.isEmpty())
 		{
-			m_player->setGridPosition(originalPos, *m_mapSystem);
-			m_mapSystem->revealAround(originalPos);
-			clearTargeting();
-			return;
+			const Point cameraTile = *watchTile;
+			if (cameraTile != originalPos)
+			{
+				m_player->setGridPosition(cameraTile, *m_mapSystem);
+			}
+			destroyBoxesAlong(travelledPath);
+			if (m_boxBreakCharges > 0)
+			{
+				--m_boxBreakCharges;
+			}
+			revealPath(travelledPath);
+			m_mapSystem->revealAround(cameraTile);
 		}
+
+		clearTargeting();
+		return;
+	}
+
+	if (option.destination != originalPos)
+	{
+		m_player->setGridPosition(option.destination, *m_mapSystem);
 	}
 
 	destroyBoxesAlong(option.path);
@@ -1004,6 +1051,11 @@ void CardEffectController::startAnnTargeting()
 			}
 
 			if (not m_mapSystem->canEnter(target))
+			{
+				continue;
+			}
+
+			if (ToMapObjectType(m_mapSystem->objectIdAt(target)) == MapObjectType::Pillar)
 			{
 				continue;
 			}

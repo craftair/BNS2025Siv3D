@@ -11,6 +11,10 @@ namespace
 	constexpr size_t DeckCopiesPerCard = 2;
 	constexpr size_t InitialHandSize = 4;
 	constexpr double OverlayMargin = 96.0;
+	constexpr double DeckButtonBaseSpacing = 60.0;
+	constexpr double DeckButtonShift = 32.0;
+	constexpr double DeckButtonMinSpacing = 24.0;
+	constexpr double DeckButtonOffsetX = 298.0;
 }
 
 bool CardSystem::initialize(const FilePathView& libraryPath, const Array<String>& deckIds, const CardHandConfig& config)
@@ -1032,10 +1036,15 @@ void CardSystem::updateTransform()
 	{
 		baseButtonY = sceneHeight - buttonHeight - 20.0;
 	}
-	double deckButtonX = m_offset.x - buttonWidth - 60.0;
+	const double deckSpacing = Max(DeckButtonMinSpacing, DeckButtonBaseSpacing - DeckButtonShift);
+	double deckButtonX = m_offset.x - buttonWidth - deckSpacing + DeckButtonOffsetX;
 	if (deckButtonX < 20.0)
 	{
 		deckButtonX = 20.0;
+	}
+	else if (deckButtonX + buttonWidth > sceneWidth - 20.0)
+	{
+		deckButtonX = sceneWidth - buttonWidth - 20.0;
 	}
 	if (baseButtonY < 20.0)
 	{
@@ -1594,6 +1603,9 @@ bool CardSystem::removeCardFromDeck(const String& cardId, size_t count)
 		auto& cards = m_deck.cards();
 		bool removedThisIteration = false;
 
+		Optional<size_t> preferredIndex;
+		Optional<size_t> fallbackIndex;
+
 		for (size_t index = 0; index < cards.size(); ++index)
 		{
 			const auto* def = cards[index].definition;
@@ -1602,52 +1614,70 @@ bool CardSystem::removeCardFromDeck(const String& cardId, size_t count)
 				continue;
 			}
 
-			auto adjustIndices = [&](Array<size_t>& container)
+			if (cards[index].inTrash)
 			{
-				Array<size_t> updated;
-				updated.reserve(container.size());
-				for (const size_t value : container)
-				{
-					if (value == index)
-					{
-						continue;
-					}
-
-					if (value > index)
-					{
-						updated << (value - 1);
-					}
-					else
-					{
-						updated << value;
-					}
-				}
-				container = std::move(updated);
-			};
-
-			adjustIndices(m_drawPile);
-			adjustIndices(m_handIndices);
-			adjustIndices(m_trashOrder);
-
-			if (m_draggingIndex)
-			{
-				if (*m_draggingIndex == index)
-				{
-					m_draggingIndex.reset();
-				}
-				else if (*m_draggingIndex > index)
-				{
-					--(*m_draggingIndex);
-				}
+				preferredIndex = index;
+				break;
 			}
 
-			cards.erase(cards.begin() + index);
-			layoutHand();
+			if (not fallbackIndex)
+			{
+				fallbackIndex = index;
+			}
+		}
 
-			removedAny = true;
-			removedThisIteration = true;
+		const Optional<size_t> targetIndex = preferredIndex ? preferredIndex : fallbackIndex;
+		if (not targetIndex)
+		{
 			break;
 		}
+
+		const size_t index = *targetIndex;
+
+		auto adjustIndices = [&](Array<size_t>& container)
+		{
+			Array<size_t> updated;
+			updated.reserve(container.size());
+			for (const size_t value : container)
+			{
+				if (value == index)
+				{
+					continue;
+				}
+
+				if (value > index)
+				{
+					updated << (value - 1);
+				}
+				else
+				{
+					updated << value;
+				}
+			}
+			container = std::move(updated);
+		};
+
+		adjustIndices(m_drawPile);
+		adjustIndices(m_handIndices);
+		adjustIndices(m_trashOrder);
+
+		if (m_draggingIndex)
+		{
+			if (*m_draggingIndex == index)
+			{
+				m_draggingIndex.reset();
+			}
+			else if (*m_draggingIndex > index)
+			{
+				--(*m_draggingIndex);
+			}
+		}
+
+		cards.erase(cards.begin() + index);
+		layoutHand();
+
+		removedAny = true;
+		removedThisIteration = true;
 
 		if (not removedThisIteration)
 		{
@@ -1681,6 +1711,11 @@ Array<String> CardSystem::allCardIds() const
 		result << def.id;
 	}
 	return result;
+}
+
+double CardSystem::deckButtonOffsetX()
+{
+	return DeckButtonOffsetX;
 }
 
 Vec2 CardSystem::toVirtual(const Vec2& screenPos) const

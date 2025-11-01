@@ -17,6 +17,7 @@ public:
 	void setFogOfWarEnabled(bool enabled);
 	void revealAround(const Point& gridPos);
 	void revealRadius(const Point& gridPos, int32 radius);
+	void revealObjectTiles(int32 objectId);
 	bool isTileVisible(const Point& gridPos) const;
 	bool fogOfWarEnabled() const { return m_fogOfWarEnabled; }
 	bool isInBounds(const Point& gridPos) const;

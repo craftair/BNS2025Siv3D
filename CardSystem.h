@@ -43,6 +43,7 @@ public:
 	const Texture* textureForCard(const String& cardId) const;
 	const CardDefinition* findCardDefinition(const String& cardId) const;
 	Array<String> allCardIds() const;
+	static double deckButtonOffsetX();
 
 private:
 	void loadTextures();
