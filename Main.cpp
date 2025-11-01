@@ -23,7 +23,7 @@ void Settings(GameData& data, App& manager, Array<Texture> textures, Audio audio
 	const Vec2 basePos = modalRect.tl();
 
 	SimpleGUI::Slider(U" BGM", data.bgmVolume, 0.0, 1.0, basePos + Vec2{ 48, 96 }, 96, 400);
-	GlobalAudio::SetVolume(data.bgmVolume);
+	data.bgm.setVolume(data.bgmVolume);
 
 	SimpleGUI::Slider(U" SE", data.seVolume, 0.0, 1.0, basePos + Vec2{ 48, 192 }, 96, 400);
 

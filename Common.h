@@ -17,6 +17,8 @@ enum class State
 struct GameData
 {
 	bool showSettings = false;
+	Audio bgm;
+	String bgmName = U"";
 	double bgmVolume = 1.0;
 	double seVolume = 1.0;
 	int32 totalActions = 0;

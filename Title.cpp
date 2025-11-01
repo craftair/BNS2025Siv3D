@@ -3,7 +3,13 @@
 Title::Title(const InitData& init)
 	: IScene{ init }
 {
-
+	if (getData().bgmName != U"resources/audio/title-bgm.ogg")
+	{
+		getData().bgmName = U"resources/audio/title-bgm.ogg";
+		getData().bgm = Audio{ Audio::Stream, U"resources/audio/title-bgm.ogg", Loop::Yes };
+		getData().bgm.setVolume(getData().bgmVolume);
+		getData().bgm.play();
+	}
 }
 
 void Title::update()
@@ -42,6 +48,7 @@ void Title::update()
 		}
 		if (m_optionBtn.leftClicked())
 		{
+			MouseL.clearInput();
 			seSelect1.playOneShot(getData().seVolume);
 			getData().showSettings = !getData().showSettings;
 		}
@@ -68,7 +75,7 @@ void Title::update()
 	{
 		changeScene(State::Stage1);
 	}
-	if (SimpleGUI::Button(U"Endingへ", Vec2{240, 100 }, 180))
+	if (SimpleGUI::Button(U"Endingへ", Vec2{ 240, 100 }, 180))
 	{
 		changeScene(State::Ending);
 	}
