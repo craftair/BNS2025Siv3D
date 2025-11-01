@@ -37,15 +37,16 @@ void Ending::draw() const
 	full.draw(Arg::top = ColorF{ 0.12, 0.14, 0.2 }, Arg::bottom = ColorF{ 0.02, 0.03, 0.05 });
 
 	const Vec2 headingCenter{ Scene::CenterF().x, Scene::Height() * 0.22 };
-	m_titleFont(U"エンディング(仮)").drawAt(headingCenter, ColorF{ 0.96 });
 
 	const Vec2 focusCenter = Scene::CenterF().movedBy(0, 24);
 	const auto& data = getData();
 
 	if (data.completedGame)
 	{
-		Circle{ focusCenter, 220 }.draw(ColorF{ 0.45, 0.55, 0.92, 0.18 });
+		m_titleFont(U"どんぐりをとりかえした").drawAt(headingCenter, ColorF{ 0.96 });
 
+		Circle{ focusCenter, 220 }.draw(ColorF{ 0.45, 0.55, 0.92, 0.18 });
+		
 		if (m_illustration)
 		{
 			const Size imageSize = m_illustration.size();
@@ -66,6 +67,8 @@ void Ending::draw() const
 	}
 	else
 	{
+		m_titleFont(U"ゲームオーバー").drawAt(headingCenter, ColorF{ 0.96 });
+
 		RectF highlightSquare{ 0, 0, 440, 440 };
 		highlightSquare.setCenter(focusCenter);
 		highlightSquare.draw(ColorF{ 0.45, 0.55, 0.92, 0.18 });
