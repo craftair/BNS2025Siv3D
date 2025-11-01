@@ -19,6 +19,13 @@ Ending::Ending(const InitData& init)
 
 void Ending::update()
 {
+	if (m_optionIcon.leftPressed())
+	{
+		MouseL.clearInput();
+		seSelect1.playOneShot(getData().seVolume);
+		getData().showSettings = !getData().showSettings;
+	}
+
 	const RectF button = buttonRect();
 	handleButtonInput(button);
 }
@@ -91,6 +98,8 @@ void Ending::draw() const
 	button.rounded(14).drawFrame(2, 0, ColorF{ 1.0, 1.0, 1.0, 0.3 });
 
 	m_bodyFont(U"タイトルに戻る").drawAt(button.center(), ColorF{ 0.98 });
+
+	m_optionIcon(texture1(0, 0, 48, 48)).draw();
 }
 
 bool Ending::handleButtonInput(const RectF& buttonRect)

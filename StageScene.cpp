@@ -210,6 +210,13 @@ void StageScene::update()
 	m_mapSystem.update();
 	m_player.update(m_mapSystem);
 
+	if (m_optionIcon.leftPressed())
+	{
+		MouseL.clearInput();
+		seSelect1.playOneShot(getData().seVolume);
+		getData().showSettings = !getData().showSettings;
+	}
+
 	if (m_showClearModal)
 	{
 		handleClearModalInput();
@@ -321,6 +328,8 @@ void StageScene::draw() const
 
 	drawClearModal();
 	drawActionCounter();
+
+	m_optionIcon(texture1(0, 0, 48, 48)).draw();
 }
 
 void StageScene::drawActionCounter() const

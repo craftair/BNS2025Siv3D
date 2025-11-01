@@ -21,4 +21,7 @@ private:
 	Audio seClear1{ U"resources/audio/clear1.ogg" };
 	Audio seFailed1{ U"resources/audio/failed1.ogg" };
 	Audio seSelect1{ U"resources/audio/select1.ogg" };
+
+	const Texture texture1{ U"resources/texture/option-icon.png" };
+	RectF m_optionIcon{ 1184, 48, 48, 48 };
 };
