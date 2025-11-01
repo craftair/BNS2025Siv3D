@@ -1,63 +1,140 @@
 ﻿{
     "background":  "resources/texture/field/background.png",
     "tile":  {
-                 "size":  [64,64],
-                 "texture":  "resources/texture/field/mapsquare.png"
-             },
-    "origin":  [520,180],
-    "tiles":  [
-                  [1,1,1,1,1,0,0],
-                  [1,1,0,0,1,1,1],
-                  [1,1,1,1,1,0,0]
-              ],
+        "size":  [64,64],
+        "texture":  "resources/texture/field/mapsquare.png"
+    },
+    "origin":  [100,80],
+    "tiles": [
+                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                [1,0,0,0,0,0,0,0,0,0,1,0,1,1,1,1,1],
+                [1,1,1,1,1,1,0,0,0,0,1,0,1,0,1,1,1],
+                [0,1,0,0,0,1,1,1,1,0,1,0,1,0,1,1,1],
+                [0,1,0,0,0,0,0,0,1,0,1,0,1,0,1,1,1],
+                [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ],
     "objectDefinitions":[
-                            {
-                                "texture":"resources/texture/field/box.png",
-                                "id":1
-                            },
-                            {
-                                "texture":"resources/texture/field/treasurebox.png",
-                                "id":2
-                            },
-                            {
-                                "texture":"resources/texture/field/rock.png",
-                                "id":3
-                            },
-                            {
-                                "texture":"resources/texture/field/fieldglass.png",
-                                "id":4
-                            },
-                            {
-                                "texture":"resources/texture/field/heal.png",
-                                "id":5
-                            },
-                            {
-                                "texture":"resources/texture/field/camera.png",
-                                "id":6
-                            },
-                            {
-                                "texture":"resources/texture/field/pillar.png",
-                                "id":7
-                            }
-                        ],
-    "objectPlacements":  [
-                             {
-                                 "id":  1,
-                                 "position":  [
-                                                  1,
-                                                  0
-                                              ]
-                             },
-                             {
-                                 "id":  2,
-                                 "position":  [
-                                                  4,
-                                                  2
-                                              ]
-                             },
-                             {
-                                "id":   7,
-                                "position": [6,1] 
-                             }
-                         ]
+        {
+            "texture":"resources/texture/field/box.png",
+            "id":1
+        },
+        {
+            "texture":"resources/texture/field/treasurebox.png",
+            "id":2
+        },
+        {
+            "texture":"resources/texture/field/rock.png",
+            "id":3
+        },
+        {
+            "texture":"resources/texture/field/fieldglass.png",
+            "id":4
+        },
+        {
+            "texture":"resources/texture/field/heal.png",
+            "id":5
+        },
+        {
+            "texture":"resources/texture/field/camera.png",
+            "id":6
+        },
+        {
+            "texture":"resources/texture/field/pillar.png",
+            "id":7
+        }
+    ],
+    "objectPlacements": [
+        {
+            "id":1,
+            "position":[0,1]
+        },
+        {
+            "id":1,
+            "position":[3,2]
+        },
+        {
+            "id":1,
+            "position":[6,3]
+        },
+        {
+            "id":1,
+            "position":[12,2]
+        },
+        {
+            "id":2,
+            "position":[0,2]
+        },
+        {
+            "id":2,
+            "position":[15,0]
+        },
+        {
+            "id":2,
+            "position":[12,1]
+        },
+        {
+            "id":3,
+            "position":[10,1]
+        },
+        {
+            "id":3,
+            "position":[12,2]
+        },
+        {
+            "id":3,
+            "position":[12,4]
+        },
+        {
+            "id":4,
+            "position":[1,5]
+        },
+        {
+            "id":4,
+            "position":[14,1]
+        },
+        {
+            "id":5,
+            "position":[16,0]
+        },
+        {
+            "id":5,
+            "position":[16,5]
+        },
+        {
+            "id":5,
+            "position":[1,2]
+        },
+        {
+            "id":6,
+            "position":[15,2],
+            "watchTiles":[
+                [16,2]
+            ]
+        },
+        {
+            "id":6,
+            "position":[15,3],
+            "watchTiles":[
+                [14,3]
+            ]
+        },
+        {
+            "id":6,
+            "position":[15,4],
+            "watchTiles":[
+                [16,4]
+            ]
+        },
+        {
+            "id":6,
+            "position":[3,5],
+            "watchTiles":[
+                [2,5]
+            ]
+        },
+        {
+            "id":7,
+            "position":[10,2] 
+        }
+    ]
 }
