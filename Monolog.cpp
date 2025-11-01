@@ -28,7 +28,7 @@ void Monolog::update()
 		stopwatch.restart();
 		if (message_index >= m_messages.size())
 		{
-			changeScene(State::Title);
+			changeScene(State::Stage1);
 		}
 	}
 }
