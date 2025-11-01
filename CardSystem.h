@@ -124,4 +124,6 @@ private:
 
 	GameData m_gameData;
 	Audio seCursor1{ U"resources/audio/cursor1.ogg" };
+	Audio seCancel1{ U"resources/audio/cancel1.ogg" };
+	Audio seSelect1{ U"resources/audio/select1.ogg" };
 };

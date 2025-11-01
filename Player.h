@@ -7,6 +7,7 @@ class MapSystem;
 class Player
 {
 public:
+	Player(GameData gameData);
 	bool init(const FilePathView& texturePath, const MapSystem& map, const Point& startGrid);
 	void setGridPosition(const Point& gridPos, const MapSystem& map);
 	void update(const MapSystem& map);
@@ -51,4 +52,7 @@ private:
 	RectF m_targetRect{ 0, 0, 0, 0 };
 	double m_scaleRatio = 0.94;
 	AnimationState m_animation;
+
+	GameData m_gameData;
+	Audio seMove{ U"resources/audio/move1.ogg" };
 };

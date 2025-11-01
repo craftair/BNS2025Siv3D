@@ -1,19 +1,25 @@
-#include "Player.h"
+﻿#include "Player.h"
 #include "MapSystem.h"
 
 namespace
 {
-Texture loadTextureOrEmpty(const FilePathView& path)
-{
-	try
+	Texture loadTextureOrEmpty(const FilePathView& path)
 	{
-		return Texture{ path, TextureDesc::Mipped };
-	}
-	catch (...)
-	{
-		return Texture{};
+		try
+		{
+			return Texture{ path, TextureDesc::Mipped };
+		}
+		catch (...)
+		{
+			return Texture{};
+		}
 	}
 }
+
+Player::Player(GameData gameData)
+	:m_gameData{ gameData }
+{
+
 }
 
 bool Player::init(const FilePathView& texturePath, const MapSystem& map, const Point& startGrid)
@@ -90,6 +96,8 @@ void Player::setGridPosition(const Point& gridPos, const MapSystem& map)
 	// Ensure size updated for the new tile whilst animating.
 	m_visualRect.size = startRect.size;
 	m_visualRect.pos = startRect.pos;
+
+	seMove.playOneShot(m_gameData.seVolume);
 }
 
 void Player::update(const MapSystem& map)
@@ -113,21 +121,21 @@ void Player::draw(const MapSystem& map) const
 	const Transformer2D transformer{ Mat3x2::Scale(map.scale()).translated(map.offset()) };
 
 	auto drawTextureRegion = [&](const Texture& texture, bool mirrorHorizontal = false)
-	{
-		if (texture)
 		{
-			TextureRegion region = texture;
-			if (mirrorHorizontal)
+			if (texture)
 			{
-				region = region.mirrored();
+				TextureRegion region = texture;
+				if (mirrorHorizontal)
+				{
+					region = region.mirrored();
+				}
+				region.resized(m_visualRect.size).draw(m_visualRect.pos);
 			}
-			region.resized(m_visualRect.size).draw(m_visualRect.pos);
-		}
-		else
-		{
-			m_visualRect.draw(ColorF{ 0.95, 0.85, 0.2, 0.9 });
-		}
-	};
+			else
+			{
+				m_visualRect.draw(ColorF{ 0.95, 0.85, 0.2, 0.9 });
+			}
+		};
 
 	if (m_animation.active)
 	{

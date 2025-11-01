@@ -6,6 +6,8 @@ StageScene::StageScene(const InitData& init, StageConfig config, GameData gameDa
 	: IScene{ init }
 	, m_config{ std::move(config) }
 	, m_cardSystem{ gameData }
+	, m_cardEffects{ gameData }
+	, m_player{ gameData }
 {
 	Scene::SetResizeMode(ResizeMode::Keep);
 
@@ -610,6 +612,8 @@ void StageScene::handleGoalReached()
 	m_treasureHover.reset();
 	prepareKanjiReward();
 
+	seExplosion1.playOneShot(getData().seVolume);
+
 	if (not m_resultRecorded)
 	{
 		auto& data = getData();
@@ -663,12 +667,14 @@ void StageScene::handleClearModalInput()
 	const bool hasNext = m_config.nextState.has_value();
 	if (hasNext && (layout.nextButton.leftClicked() || KeyEnter.down()))
 	{
+		seSelect1.playOneShot(getData().seVolume);
 		changeScene(*m_config.nextState);
 		return;
 	}
 
 	if (layout.titleButton.leftClicked() || KeyEscape.down())
 	{
+		seSelect1.playOneShot(getData().seVolume);
 		changeScene(State::Title);
 		return;
 	}

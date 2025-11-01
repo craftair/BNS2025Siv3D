@@ -90,11 +90,13 @@ void CardSystem::update()
 
 	if (m_endTurnButtonScreen.leftClicked())
 	{
+		seCancel1.playOneShot(m_gameData.seVolume);
 		endTurn();
 	}
 
 	if (m_deckButtonScreen.leftClicked())
 	{
+		seSelect1.playOneShot(m_gameData.seVolume);
 		m_showDeck = (not m_showDeck);
 		m_deckJustOpened = m_showDeck;
 		if (m_showDeck)
@@ -124,6 +126,7 @@ void CardSystem::update()
 
 	if (m_trashButtonScreen.leftClicked())
 	{
+		seSelect1.playOneShot(m_gameData.seVolume);
 		m_showTrash = (not m_showTrash);
 		m_trashJustOpened = m_showTrash;
 		if (m_showTrash)
@@ -237,10 +240,12 @@ void CardSystem::update()
 		{
 			if (MouseL.down() && (not cursorOnCard))
 			{
+				seCancel1.playOneShot(m_gameData.seVolume);
 				m_showDeck = false;
 			}
 			else if (KeyEscape.down())
 			{
+				seCancel1.playOneShot(m_gameData.seVolume);
 				m_showDeck = false;
 			}
 		}
@@ -350,10 +355,12 @@ void CardSystem::update()
 		{
 			if (MouseL.down() && (not cursorOnCard))
 			{
+				seCancel1.playOneShot(m_gameData.seVolume);
 				m_showTrash = false;
 			}
 			else if (KeyEscape.down())
 			{
+				seCancel1.playOneShot(m_gameData.seVolume);
 				m_showTrash = false;
 			}
 		}

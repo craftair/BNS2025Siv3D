@@ -98,4 +98,7 @@ private:
 	Texture m_backgroundTexture;
 	Texture m_kanjiSlotTexture;
 	HashTable<String, Texture> m_kanjiTextures;
+
+	Audio seExplosion1{ U"resources/audio/explosion1.ogg" };
+	Audio seSelect1{ U"resources/audio/select1.ogg" };
 };
