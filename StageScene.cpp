@@ -72,6 +72,7 @@ StageScene::StageScene(const InitData& init, StageConfig config)
 	}
 
 	m_mapSystem.setFogOfWarEnabled(true);
+	m_mapSystem.revealObjectTiles(static_cast<int32>(MapObjectType::Pillar));
 
 	if (not m_player.init(U"resources/texture/player/player.png", m_mapSystem, Point{ 0, 0 }))
 	{
@@ -150,8 +151,9 @@ StageScene::StageScene(const InitData& init, StageConfig config)
 
 void StageScene::activateYakuEffect()
 {
-	m_promoteShinToKami = true;
 	m_cardSystem.addCardToDeck(U"soku");
+	m_cardSystem.addCardToDeck(U"soku");
+	m_promoteShinToKami = true;
 }
 
 void StageScene::healActionsToFull()
@@ -940,6 +942,7 @@ void StageScene::drawKanjiPanel() const
 	{
 		return;
 	}
+	const double deckOffset = CardSystem::deckButtonOffsetX();
 
 	Array<String> ownedOrdered;
 	ownedOrdered.reserve(orderedKanji.size());
@@ -988,7 +991,8 @@ void StageScene::drawKanjiPanel() const
 	const double spacing = slotSize.x * 0.18;
 	const double totalWidth = slotSize.x * slotCount + spacing * (slotCount - 1);
 	const double gapFromDeck = 18.0;
-	const double unclampedX = deckRect.center().x - totalWidth * 0.5;
+	const double anchorCenterX = deckRect.center().x - deckOffset;
+	const double unclampedX = anchorCenterX - totalWidth * 0.5;
 	const double baseY = deckRect.y - slotSize.y - gapFromDeck;
 	const double clampedX = Clamp(unclampedX, 20.0, Scene::Width() - totalWidth - 20.0);
 	const double clampedY = Max(16.0, baseY);
@@ -996,7 +1000,7 @@ void StageScene::drawKanjiPanel() const
 
 	for (size_t i = 0; i < slotCount; ++i)
 	{
-		const Vec2 slotPos = basePos + Vec2{ (slotSize.x + spacing) * i, 0.0 };
+		const Vec2 slotPos = basePos + Vec2{ (slotSize.x + spacing + 3) * i, 0.0 };
 		const RectF slotRect{ slotPos, slotSize };
 
 		if (m_kanjiSlotTexture)

@@ -72,6 +72,7 @@ private:
 	void destroyBoxesAlong(const Array<Point>& path);
 	bool isBox(const Point& gridPos) const;
 	bool applyImmediateEffect(const String& cardId);
+	void removeCardForStage(const String& cardId);
 	void enqueueTargetedEffect(const String& cardId);
 	void updateMapTargeting();
 	void drawMapTargeting() const;

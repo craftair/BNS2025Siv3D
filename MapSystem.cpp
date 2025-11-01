@@ -387,7 +387,11 @@ void MapSystem::revealAround(const Point& gridPos)
 		{ 1, 0 },
 		{ -1, 0 },
 		{ 0, 1 },
-		{ 0, -1 }
+		{ 0, -1 },
+		{ 1, 1 },
+		{ 1, -1 },
+		{ -1, 1 },
+		{ -1, -1 }
 	};
 
 	for (const auto& offset : offsets)
@@ -396,6 +400,28 @@ void MapSystem::revealAround(const Point& gridPos)
 		if (isInBounds(target))
 		{
 			m_tileVisibility[target.y][target.x] = true;
+		}
+	}
+}
+
+void MapSystem::revealObjectTiles(int32 objectId)
+{
+	if (not m_fogOfWarEnabled)
+	{
+		return;
+	}
+
+	for (const auto& placement : m_objectPlacements)
+	{
+		if (placement.id != objectId)
+		{
+			continue;
+		}
+
+		const Point& gridPos = placement.gridPos;
+		if (isInBounds(gridPos))
+		{
+			m_tileVisibility[gridPos.y][gridPos.x] = true;
 		}
 	}
 }
