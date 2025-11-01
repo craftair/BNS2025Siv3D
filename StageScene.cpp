@@ -210,6 +210,12 @@ void StageScene::update()
 	m_mapSystem.update();
 	m_player.update(m_mapSystem);
 
+	if (quakeTimer.s() >= 1)
+	{
+		quakeTimer.reset();
+		isQuake = false;
+	}
+
 	if (m_optionIcon.leftPressed())
 	{
 		MouseL.clearInput();
@@ -284,28 +290,41 @@ void StageScene::draw() const
 {
 	Scene::SetBackground(ColorF{ 0.0 });
 
-	if (m_backgroundTexture)
 	{
-		const Size texSize = m_backgroundTexture.size();
-		if ((texSize.x > 0) && (texSize.y > 0))
+		if (isQuake)
 		{
-			const double scaleX = Scene::Width() / static_cast<double>(texSize.x);
-			const double scaleY = Scene::Height() / static_cast<double>(texSize.y);
-			const double scale = Max(scaleX, scaleY);
-			m_backgroundTexture.scaled(scale).drawAt(Scene::Center());
+			cameraOffset = { Random<double>(-5, 5), Random<double>(-5, 5) };
+		}
+		else
+		{
+			cameraOffset = { 0, 0 };
+		}
+		const Transformer2D t{ Mat3x2::Translate(cameraOffset) };
+
+		if (m_backgroundTexture)
+		{
+			const Size texSize = m_backgroundTexture.size();
+			if ((texSize.x > 0) && (texSize.y > 0))
+			{
+				const double scaleX = Scene::Width() / static_cast<double>(texSize.x);
+				const double scaleY = Scene::Height() / static_cast<double>(texSize.y);
+				const double scale = Max(scaleX, scaleY);
+				m_backgroundTexture.scaled(scale).drawAt(Scene::Center());
+			}
+			else
+			{
+				RectF{ 0, 0, Scene::Width(), Scene::Height() }.draw(ColorF{ 0.12, 0.12, 0.16 });
+			}
 		}
 		else
 		{
 			RectF{ 0, 0, Scene::Width(), Scene::Height() }.draw(ColorF{ 0.12, 0.12, 0.16 });
 		}
-	}
-	else
-	{
-		RectF{ 0, 0, Scene::Width(), Scene::Height() }.draw(ColorF{ 0.12, 0.12, 0.16 });
+
+		m_mapSystem.draw();
+		m_player.draw(m_mapSystem);
 	}
 
-	m_mapSystem.draw();
-	m_player.draw(m_mapSystem);
 	const bool overlayOpen = m_cardSystem.isOverlayOpen();
 	if (overlayOpen)
 	{
@@ -619,6 +638,8 @@ void StageScene::handleGoalReached()
 	deactivateFullMapVision();
 	clearDebuffImmunity();
 	m_showClearModal = true;
+	isQuake = true;
+	quakeTimer.start();
 	m_treasureSelection = TreasureSelection{};
 	m_treasureHover.reset();
 	prepareKanjiReward();
@@ -1064,4 +1085,3 @@ void StageScene::drawKanjiPanel() const
 		}
 	}
 }
-
