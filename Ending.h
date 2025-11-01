@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Common.h"
 
 class Ending : public App::Scene
@@ -17,4 +17,8 @@ private:
 	double m_buttonMargin = 36.0;
 	Font m_titleFont{ 48, Typeface::Bold };
 	Font m_bodyFont{ 28 };
+
+	Audio seClear1{ U"resources/audio/clear1.ogg" };
+	Audio seFailed1{ U"resources/audio/failed1.ogg" };
+	Audio seSelect1{ U"resources/audio/select1.ogg" };
 };

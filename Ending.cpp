@@ -4,6 +4,17 @@ Ending::Ending(const InitData& init)
 	: IScene{ init }
 {
 	Scene::SetResizeMode(ResizeMode::Keep);
+	const auto& data = getData();
+	if (data.completedGame)
+	{
+		m_illustration = Texture{ U"resources/texture/happyend-cg.png" };
+		seClear1.playOneShot(data.seVolume);
+	}
+	else
+	{
+		m_illustration = Texture{ U"resources/texture/badend-cg.png" };
+		seFailed1.playOneShot(data.seVolume);
+	}
 }
 
 void Ending::update()
@@ -52,9 +63,25 @@ void Ending::draw() const
 		highlightSquare.setCenter(focusCenter);
 		highlightSquare.draw(ColorF{ 0.45, 0.55, 0.92, 0.18 });
 
-		RectF resultSquare{ 0, 0, 320, 320 };
-		resultSquare.setCenter(focusCenter);
-		resultSquare.draw(ColorF{ 0.6, 0.72, 0.96, 0.35 });
+		if (m_illustration)
+		{
+			const Size imageSize = m_illustration.size();
+			Vec2 drawSize = Vec2{ imageSize };
+			if ((imageSize.x > 0) && (imageSize.y > 0))
+			{
+				const Vec2 targetSize{ 520, 360 };
+				const double scale = Min(targetSize.x / drawSize.x, targetSize.y / drawSize.y);
+				drawSize *= scale;
+			}
+			const Vec2 drawPos = focusCenter - drawSize * 0.5;
+			m_illustration.resized(drawSize.x, drawSize.y).draw(drawPos);
+		}
+		else
+		{
+			RectF resultSquare{ 0, 0, 320, 320 };
+			resultSquare.setCenter(focusCenter);
+			resultSquare.draw(ColorF{ 0.6, 0.72, 0.96, 0.35 });
+		}
 	}
 
 	const RectF button = buttonRect();
@@ -70,6 +97,7 @@ bool Ending::handleButtonInput(const RectF& buttonRect)
 {
 	if (buttonRect.leftClicked() || KeyEnter.down())
 	{
+		seSelect1.playOneShot(getData().seVolume);
 		changeScene(State::Title);
 		return true;
 	}
