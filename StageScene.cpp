@@ -2,9 +2,12 @@
 #include <utility>
 #include <algorithm>
 
-StageScene::StageScene(const InitData& init, StageConfig config)
+StageScene::StageScene(const InitData& init, StageConfig config, GameData gameData)
 	: IScene{ init }
 	, m_config{ std::move(config) }
+	, m_cardSystem{ gameData }
+	, m_cardEffects{ gameData }
+	, m_player{ gameData }
 {
 	Scene::SetResizeMode(ResizeMode::Keep);
 
@@ -311,11 +314,11 @@ void StageScene::draw() const
 	{
 		m_cardEffects.draw();
 	}
-	
+
 	const double headerHeight = Scene::Height() * 0.1;
 	const ColorF headerColor{ 0x28 / 255.0, 0x27 / 255.0, 0x26 / 255.0 };
 	RectF{ 0, 0, Scene::Width(), headerHeight }.draw(headerColor);
-	
+
 	drawClearModal();
 	drawActionCounter();
 }
@@ -611,6 +614,8 @@ void StageScene::handleGoalReached()
 	m_treasureHover.reset();
 	prepareKanjiReward();
 
+	seExplosion1.playOneShot(getData().seVolume);
+
 	if (not m_resultRecorded)
 	{
 		auto& data = getData();
@@ -664,12 +669,14 @@ void StageScene::handleClearModalInput()
 	const bool hasNext = m_config.nextState.has_value();
 	if (hasNext && (layout.nextButton.leftClicked() || KeyEnter.down()))
 	{
+		seSelect1.playOneShot(getData().seVolume);
 		changeScene(*m_config.nextState);
 		return;
 	}
 
 	if (layout.titleButton.leftClicked() || KeyEscape.down())
 	{
+		seSelect1.playOneShot(getData().seVolume);
 		changeScene(State::Title);
 		return;
 	}
@@ -721,24 +728,24 @@ void StageScene::drawClearModal() const
 	m_clearCountFont(Format(totalActionsTaken())).drawAt(totalValueCenter, ColorF{ 0.98 });
 
 	const auto drawButton = [&](const RectF& rect, const String& text, bool primary, bool enabled)
-	{
-		const bool hovered = enabled && rect.mouseOver();
-		const ColorF baseColor = primary ? ColorF{ 0.34, 0.55, 0.95, 0.92 } : ColorF{ 0.28, 0.32, 0.48, 0.92 };
-		const ColorF hoverColor = primary ? ColorF{ 0.45, 0.68, 1.0, 0.96 } : ColorF{ 0.38, 0.42, 0.58, 0.96 };
-		const ColorF fill = hovered ? hoverColor : baseColor;
-		rect.rounded(14).draw(fill);
-		rect.rounded(14).drawFrame(2, 0, ColorF{ 1.0, 1.0, 1.0, 0.28 });
+		{
+			const bool hovered = enabled && rect.mouseOver();
+			const ColorF baseColor = primary ? ColorF{ 0.34, 0.55, 0.95, 0.92 } : ColorF{ 0.28, 0.32, 0.48, 0.92 };
+			const ColorF hoverColor = primary ? ColorF{ 0.45, 0.68, 1.0, 0.96 } : ColorF{ 0.38, 0.42, 0.58, 0.96 };
+			const ColorF fill = hovered ? hoverColor : baseColor;
+			rect.rounded(14).draw(fill);
+			rect.rounded(14).drawFrame(2, 0, ColorF{ 1.0, 1.0, 1.0, 0.28 });
 
-		const ColorF textColor = enabled ? ColorF{ 0.98 } : ColorF{ 0.75 };
-		if (FontAsset::IsRegistered(U"MisakiFont"))
-		{
-			FontAsset(U"MisakiFont")(text).drawAt(rect.center(), textColor);
-		}
-		else
-		{
-			m_clearCountFont(text).drawAt(rect.center(), textColor);
-		}
-	};
+			const ColorF textColor = enabled ? ColorF{ 0.98 } : ColorF{ 0.75 };
+			if (FontAsset::IsRegistered(U"MisakiFont"))
+			{
+				FontAsset(U"MisakiFont")(text).drawAt(rect.center(), textColor);
+			}
+			else
+			{
+				m_clearCountFont(text).drawAt(rect.center(), textColor);
+			}
+		};
 
 	const bool hasNext = m_config.nextState.has_value();
 	drawButton(layout.titleButton, U"タイトルへ戻る", false, true);
@@ -895,24 +902,24 @@ void StageScene::unlockCardsForKanji(const KanjiInfo& info)
 	if (info.id == U"神")
 	{
 		auto removeAllCopies = [&](const String& cardId)
-		{
-			data.unlockedCards.erase(cardId);
-			while (m_cardSystem.removeCardFromDeck(cardId))
 			{
-			}
-		};
+				data.unlockedCards.erase(cardId);
+				while (m_cardSystem.removeCardFromDeck(cardId))
+				{
+				}
+			};
 
 		removeAllCopies(U"dou");
 		removeAllCopies(U"pin");
 		removeAllCopies(U"yaku");
 
 		auto ensureCard = [&](const String& cardId)
-		{
-			if (data.unlockedCards.insert(cardId).second)
 			{
-				m_cardSystem.addCardToDeck(cardId);
-			}
-		};
+				if (data.unlockedCards.insert(cardId).second)
+				{
+					m_cardSystem.addCardToDeck(cardId);
+				}
+			};
 
 		ensureCard(U"dou2");
 		ensureCard(U"pin2");

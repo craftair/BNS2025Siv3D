@@ -10,7 +10,7 @@
 #include "Stage5.h"
 #include "Ending.h"
 
-void Settings(GameData& data, App& manager, Array<Texture> textures, Audio audio)
+void Settings(GameData& data, App& manager, Array<Texture> textures, Array<Audio> audio)
 {
 	const RectF backgroundRect{ 0, 0, 1280, 720 };
 	backgroundRect.draw(ColorF{ 0.0, 0.5 });
@@ -29,17 +29,19 @@ void Settings(GameData& data, App& manager, Array<Texture> textures, Audio audio
 
 	if (SimpleGUI::Button(U"タイトルに戻る", basePos + Vec2{ 48, 288 }))
 	{
-		audio.playOneShot(data.seVolume);
+		audio[0].playOneShot(data.seVolume);
 		data.showSettings = false;
 		manager.changeScene(State::Title);
 	}
 
 	if (backgroundRect.leftClicked() && not modalRect.leftClicked())
 	{
+		audio[1].playOneShot(data.seVolume);
 		data.showSettings = false;
 	}
 	if (closeBtnRect.leftClicked())
 	{
+		audio[1].playOneShot(data.seVolume);
 		data.showSettings = false;
 	}
 }
@@ -55,7 +57,10 @@ void Main()
 		Texture{ U"resources/texture/close-btn.png" }
 	};
 
-	Audio seSelect1{ U"resources/audio/select1.ogg" };
+	Array<Audio> settingsAudio = {
+		Audio{ U"resources/audio/select1.ogg" },
+		Audio{ U"resources/audio/cancel1.ogg" }
+	};
 
 	App manager;
 	manager.add<Title>(State::Title);
@@ -83,7 +88,7 @@ void Main()
 
 		if (gameData->showSettings)
 		{
-			Settings(*gameData, manager, settingsTextures, seSelect1);
+			Settings(*gameData, manager, settingsTextures, settingsAudio);
 		}
 	}
 }

@@ -17,7 +17,7 @@ struct StageConfig
 class StageScene : public App::Scene
 {
 public:
-	StageScene(const InitData& init, StageConfig config);
+	StageScene(const InitData& init, StageConfig config, GameData gameData);
 	void update() override;
 	void draw() const override;
 
@@ -98,4 +98,7 @@ private:
 	Texture m_backgroundTexture;
 	Texture m_kanjiSlotTexture;
 	HashTable<String, Texture> m_kanjiTextures;
+
+	Audio seExplosion1{ U"resources/audio/explosion1.ogg" };
+	Audio seSelect1{ U"resources/audio/select1.ogg" };
 };

@@ -1,7 +1,7 @@
-#include "Stage1.h"
+﻿#include "Stage1.h"
 
 Stage1::Stage1(const InitData& init)
-	: StageScene{ init, StageConfig{ .stageIndex = 1, .nextState = State::Stage2 } }
+	: StageScene{ init, StageConfig{.stageIndex = 1, .nextState = State::Stage2 }, *init._s }
 {
 }
 

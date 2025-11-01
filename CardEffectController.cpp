@@ -16,6 +16,12 @@ namespace
 	};
 }
 
+CardEffectController::CardEffectController(GameData gameData)
+	: m_gameData(gameData)
+{
+
+}
+
 void CardEffectController::initialize(MapSystem* mapSystem, Player* player, CardSystem* cardSystem, StageScene* stage)
 {
 	m_mapSystem = mapSystem;
@@ -97,6 +103,8 @@ void CardEffectController::onCardPlayed(const String& cardId)
 	{
 		m_cardSystem->setInputSuppressed(true);
 	}
+
+	seStart1.playOneShot(m_gameData.seVolume);
 
 	if (cardId == U"ha")
 	{

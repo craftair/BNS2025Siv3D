@@ -9,6 +9,7 @@ class StageScene;
 class CardEffectController
 {
 public:
+	CardEffectController(GameData gameData);
 	void initialize(MapSystem* mapSystem, Player* player, CardSystem* cardSystem, StageScene* stage);
 	void update();
 	void draw() const;
@@ -113,4 +114,7 @@ private:
 	Array<String> m_pendingCardEffects;
 	int32 m_boxBreakCharges = 0;
 	size_t m_nextCardRepeats = 0;
+
+	GameData m_gameData;
+	Audio seStart1{ U"resources/audio/start1.ogg" };
 };

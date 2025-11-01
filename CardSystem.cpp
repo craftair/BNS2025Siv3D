@@ -1,5 +1,6 @@
 ﻿#include "CardSystem.h"
 #include <algorithm>
+
 namespace
 {
 	constexpr double TrashPaddingLeft = 24.0;
@@ -15,6 +16,12 @@ namespace
 	constexpr double DeckButtonShift = 32.0;
 	constexpr double DeckButtonMinSpacing = 24.0;
 	constexpr double DeckButtonOffsetX = 298.0;
+}
+
+CardSystem::CardSystem(GameData gameData)
+	: m_gameData(gameData)
+{
+
 }
 
 bool CardSystem::initialize(const FilePathView& libraryPath, const Array<String>& deckIds, const CardHandConfig& config)
@@ -87,11 +94,13 @@ void CardSystem::update()
 
 	if (m_endTurnButtonScreen.leftClicked())
 	{
+		seCancel1.playOneShot(m_gameData.seVolume);
 		endTurn();
 	}
 
 	if (m_deckButtonScreen.leftClicked())
 	{
+		seSelect1.playOneShot(m_gameData.seVolume);
 		m_showDeck = (not m_showDeck);
 		m_deckJustOpened = m_showDeck;
 		if (m_showDeck)
@@ -121,6 +130,7 @@ void CardSystem::update()
 
 	if (m_trashButtonScreen.leftClicked())
 	{
+		seSelect1.playOneShot(m_gameData.seVolume);
 		m_showTrash = (not m_showTrash);
 		m_trashJustOpened = m_showTrash;
 		if (m_showTrash)
@@ -234,10 +244,12 @@ void CardSystem::update()
 		{
 			if (MouseL.down() && (not cursorOnCard))
 			{
+				seCancel1.playOneShot(m_gameData.seVolume);
 				m_showDeck = false;
 			}
 			else if (KeyEscape.down())
 			{
+				seCancel1.playOneShot(m_gameData.seVolume);
 				m_showDeck = false;
 			}
 		}
@@ -347,10 +359,12 @@ void CardSystem::update()
 		{
 			if (MouseL.down() && (not cursorOnCard))
 			{
+				seCancel1.playOneShot(m_gameData.seVolume);
 				m_showTrash = false;
 			}
 			else if (KeyEscape.down())
 			{
+				seCancel1.playOneShot(m_gameData.seVolume);
 				m_showTrash = false;
 			}
 		}
@@ -1079,13 +1093,15 @@ void CardSystem::updateCards()
 
 	updateDragging(cursorVirtual);
 
+	const Optional<size_t> oldHoverIndex = m_hoverCardIndex;
+
 	if (m_draggingIndex)
 	{
 		m_hoverCardIndex.reset();
 	}
 	else
 	{
-		m_hoverCardIndex.reset();
+		Optional<size_t> newHoverIndex;
 		if (isInsideVirtual(cursorVirtual))
 		{
 			for (int32 i = static_cast<int32>(cards.size()) - 1; i >= 0; --i)
@@ -1098,11 +1114,17 @@ void CardSystem::updateCards()
 
 				if (card.rect.contains(cursorVirtual))
 				{
-					m_hoverCardIndex = static_cast<size_t>(i);
+					newHoverIndex = static_cast<size_t>(i);
 					break;
 				}
 			}
 		}
+		m_hoverCardIndex = newHoverIndex;
+	}
+
+	if (m_hoverCardIndex && (oldHoverIndex != m_hoverCardIndex))
+	{
+		seCursor1.playOneShot(m_gameData.seVolume);
 	}
 
 	for (size_t i = 0; i < cards.size(); ++i)
