@@ -104,4 +104,8 @@ private:
 
 	const Texture texture1{ U"resources/texture/option-icon.png" };
 	RectF m_optionIcon{ 1184, 48, 48, 48 };
+
+	mutable Vec2 cameraOffset{ 0, 0 };
+	bool isQuake = false;
+	Stopwatch quakeTimer;
 };
