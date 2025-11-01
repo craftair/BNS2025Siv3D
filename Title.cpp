@@ -54,6 +54,24 @@ void Title::update()
 	{
 		changeScene(State::Stage1);
 	}
+	if (SimpleGUI::Button(U"Endingへ", Vec2{240, 100 }, 180))
+	{
+		changeScene(State::Ending);
+	}
+	if (getData().completedGame == false)
+	{
+		if (SimpleGUI::Button(U"completed: false", Vec2{ 40, 160 }, 360))
+		{
+			getData().completedGame = true;
+		}
+	}
+	else
+	{
+		if (SimpleGUI::Button(U"completed: true", Vec2{ 40, 160 }, 360))
+		{
+			getData().completedGame = false;
+		}
+	}
 }
 
 void Title::draw() const
