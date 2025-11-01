@@ -10,6 +10,13 @@ Title::Title(const InitData& init)
 		getData().bgm.setVolume(getData().bgmVolume);
 		getData().bgm.play();
 	}
+
+	getData().showSettings = false;
+	getData().totalActions = 0;
+	getData().kanjiOwned = { U"進" };
+	getData().kanjiRewardStagesClaimed.clear();
+	getData().unlockedCards.clear();
+	getData().completedGame = false;
 }
 
 void Title::update()
