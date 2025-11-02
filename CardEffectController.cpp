@@ -1008,7 +1008,12 @@ void CardEffectController::startKyuuTargeting()
 		const Point firstStep = origin + dir;
 		const Point secondStep = firstStep + dir;
 
-		if (not canTraverse(firstStep) || not canTraverse(secondStep))
+		if (not m_mapSystem->isInBounds(secondStep))
+		{
+			continue;
+		}
+
+		if (not canTraverse(secondStep))
 		{
 			continue;
 		}
@@ -1016,7 +1021,6 @@ void CardEffectController::startKyuuTargeting()
 		TargetOption option;
 		option.selection = secondStep;
 		option.destination = secondStep;
-		option.path << firstStep;
 		option.path << secondStep;
 		m_targetOptions << option;
 	}
@@ -1158,7 +1162,7 @@ void CardEffectController::startDestroyObstacleTargeting()
 
 			const Point tile{ static_cast<int32>(x), static_cast<int32>(y) };
 			const MapObjectType type = ToMapObjectType(m_mapSystem->objectIdAt(tile));
-			if ((type != MapObjectType::Box) && (type != MapObjectType::Rock))
+			if ((type != MapObjectType::Box) && (type != MapObjectType::Camera))
 			{
 				continue;
 			}

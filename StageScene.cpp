@@ -154,6 +154,28 @@ StageScene::StageScene(const InitData& init, StageConfig config, GameData gameDa
 
 void StageScene::activateYakuEffect()
 {
+	const auto& data = getData();
+
+	if (data.kanjiOwned.contains(U"新"))
+	{
+		auto replaceCardInDeck = [&](const String& fromId, const String& toId)
+		{
+			size_t replaced = 0;
+			while (m_cardSystem.removeCardFromDeck(fromId))
+			{
+				++replaced;
+			}
+
+			for (size_t i = 0; i < replaced; ++i)
+			{
+				m_cardSystem.addCardToDeck(toId);
+			}
+		};
+
+		replaceCardInDeck(U"pin", U"pin2");
+		replaceCardInDeck(U"dou", U"dou2");
+	}
+
 	m_cardSystem.addCardToDeck(U"soku");
 	m_cardSystem.addCardToDeck(U"soku");
 	m_promoteShinToKami = true;
